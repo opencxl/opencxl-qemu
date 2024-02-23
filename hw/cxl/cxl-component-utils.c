@@ -12,24 +12,34 @@
 #include "qapi/error.h"
 #include "hw/pci/pci.h"
 #include "hw/cxl/cxl.h"
+#include "trace.h"
 
 static uint64_t cxl_cache_mem_read_reg(void *opaque, hwaddr offset,
                                        unsigned size)
 {
     CXLComponentState *cxl_cstate = opaque;
     ComponentRegisters *cregs = &cxl_cstate->crb;
-
-    if (size == 8) {
-        qemu_log_mask(LOG_UNIMP,
-                      "CXL 8 byte cache mem registers not implemented\n");
-        return 0;
-    }
+    uint64_t value;
 
     if (cregs->special_ops && cregs->special_ops->read) {
-        return cregs->special_ops->read(cxl_cstate, offset, size);
+        value = cregs->special_ops->read(cxl_cstate, offset, size);
     } else {
-        return cregs->cache_mem_registers[offset / sizeof(*cregs->cache_mem_registers)];
+        if (size == 8) {
+            uint64_t index = offset / sizeof(*cregs->cache_mem_registers);
+            value = cregs->cache_mem_registers[index + 1];
+            value = value << 32;
+            value = value | cregs->cache_mem_registers[index];
+        } else {
+            value =
+                cregs->cache_mem_registers[offset /
+                                           sizeof(*cregs->cache_mem_registers)];
+        }
     }
+
+    trace_cxl_debug_64bit_read("Local CXL component register", offset, size,
+                               value);
+
+    return value;
 }
 
 static void dumb_hdm_handler(CXLComponentState *cxl_cstate, hwaddr offset,
@@ -65,11 +75,13 @@ static void cxl_cache_mem_write_reg(void *opaque, hwaddr offset, uint64_t value,
     uint32_t mask;
 
     if (size == 8) {
-        qemu_log_mask(LOG_UNIMP,
-                      "CXL 8 byte cache mem registers not implemented\n");
+        trace_cxl_debug_message(
+            "CXL component register: 64bit write is not implemented");
         return;
     }
     mask = cregs->cache_mem_regs_write_mask[offset / sizeof(*cregs->cache_mem_regs_write_mask)];
+    trace_cxl_debug_64bit_write("Local CXL component register", offset, size,
+                                value);
     value &= mask;
     /* RO bits should remain constant. Done by reading existing value */
     value |= ~mask & cregs->cache_mem_registers[offset / sizeof(*cregs->cache_mem_registers)];
@@ -177,8 +189,8 @@ static void hdm_init_common(uint32_t *reg_state, uint32_t *write_msk,
         write_msk[R_CXL_HDM_DECODER0_SIZE_LO + i * 0x20] = 0xf0000000;
         write_msk[R_CXL_HDM_DECODER0_SIZE_HI + i * 0x20] = 0xffffffff;
         write_msk[R_CXL_HDM_DECODER0_CTRL + i * 0x20] = 0x13ff;
-        if (type == CXL2_DEVICE ||
-            type == CXL2_TYPE3_DEVICE ||
+        if (type == CXL2_DEVICE || type == CXL2_TYPE1_DEVICE ||
+            type == CXL2_TYPE2_DEVICE || type == CXL2_TYPE3_DEVICE ||
             type == CXL2_LOGICAL_DEVICE) {
             write_msk[R_CXL_HDM_DECODER0_TARGET_LIST_LO + i * 0x20] = 0xf0000000;
         } else {
@@ -205,6 +217,8 @@ void cxl_component_register_init_common(uint32_t *reg_state, uint32_t *write_msk
         caps = 2;
         break;
     case CXL2_UPSTREAM_PORT:
+    case CXL2_TYPE1_DEVICE:
+    case CXL2_TYPE2_DEVICE:
     case CXL2_TYPE3_DEVICE:
     case CXL2_LOGICAL_DEVICE:
         /* + HDM */

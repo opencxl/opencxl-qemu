@@ -16,6 +16,7 @@
 #include "sysemu/numa.h"
 #include "hw/cxl/cxl.h"
 #include "hw/pci/msix.h"
+#include "trace.h"
 
 #define DWORD_BYTE 4
 
@@ -44,13 +45,15 @@ static int ct3_build_cdat_entries_for_mr(CDATSubHeader **cdat_table,
     if (!dsmas) {
         return -ENOMEM;
     }
+
+    /* Paul: Removed CDAT_DSMAS_FLAG_NV */
     *dsmas = (CDATDsmas) {
         .header = {
             .type = CDAT_TYPE_DSMAS,
             .length = sizeof(*dsmas),
         },
         .DSMADhandle = dsmad_handle,
-        .flags = CDAT_DSMAS_FLAG_NV,
+        .flags = 0,
         .DPA_base = 0,
         .DPA_length = int128_get64(mr->size),
     };
@@ -238,10 +241,12 @@ static uint32_t ct3d_config_read(PCIDevice *pci_dev, uint32_t addr, int size)
     uint32_t val;
 
     if (pcie_doe_read_config(&ct3d->doe_cdat, addr, size, &val)) {
-        return val;
+        trace_cxl_type3_debug_32bit_read("Local Config Space (DOE)", addr, size, val);
+    } else {
+        val = pci_default_read_config(pci_dev, addr, size);
+        trace_cxl_type3_debug_32bit_read("Local Config Space", addr, size, val);
     }
-
-    return pci_default_read_config(pci_dev, addr, size);
+    return val;
 }
 
 static void ct3d_config_write(PCIDevice *pci_dev, uint32_t addr, uint32_t val,
@@ -249,7 +254,12 @@ static void ct3d_config_write(PCIDevice *pci_dev, uint32_t addr, uint32_t val,
 {
     CXLType3Dev *ct3d = CXL_TYPE3(pci_dev);
 
-    pcie_doe_write_config(&ct3d->doe_cdat, addr, val, size);
+    if (pcie_doe_write_config(&ct3d->doe_cdat, addr, val, size)) {
+        trace_cxl_type3_debug_32bit_write("Local Config Space (DOE)", addr, size, val);
+        return;
+    }
+
+    trace_cxl_type3_debug_32bit_write("Local Config Space", addr, size, val);
     pci_default_write_config(pci_dev, addr, val, size);
     pcie_aer_write_config(pci_dev, addr, val, size);
 }
@@ -322,6 +332,7 @@ static void hdm_decoder_commit(CXLType3Dev *ct3d, int which)
     ARRAY_FIELD_DP32(cache_mem, CXL_HDM_DECODER0_CTRL, ERR, 0);
 
     ARRAY_FIELD_DP32(cache_mem, CXL_HDM_DECODER0_CTRL, COMMITTED, 1);
+    trace_cxl_type3_debug_message("HDM Decoder Commit");
 }
 
 static int ct3d_qmp_uncor_err_to_cxl(CxlUncorErrorType qmp_err)
@@ -483,48 +494,12 @@ static void ct3d_reg_write(void *opaque, hwaddr offset, uint64_t value,
         break;
     }
 
+    trace_cxl_type3_reg_write(offset, value);
+
     stl_le_p((uint8_t *)cache_mem + offset, value);
     if (should_commit) {
         hdm_decoder_commit(ct3d, which_hdm);
     }
-}
-
-static bool cxl_setup_memory(CXLType3Dev *ct3d, Error **errp)
-{
-    DeviceState *ds = DEVICE(ct3d);
-    MemoryRegion *mr;
-    char *name;
-
-    if (!ct3d->hostmem) {
-        error_setg(errp, "memdev property must be set");
-        return false;
-    }
-
-    mr = host_memory_backend_get_memory(ct3d->hostmem);
-    if (!mr) {
-        error_setg(errp, "memdev property must be set");
-        return false;
-    }
-    memory_region_set_nonvolatile(mr, true);
-    memory_region_set_enabled(mr, true);
-    host_memory_backend_set_mapped(ct3d->hostmem, true);
-
-    if (ds->id) {
-        name = g_strdup_printf("cxl-type3-dpa-space:%s", ds->id);
-    } else {
-        name = g_strdup("cxl-type3-dpa-space");
-    }
-    address_space_init(&ct3d->hostmem_as, mr, name);
-    g_free(name);
-
-    ct3d->cxl_dstate.pmem_size = ct3d->hostmem->size;
-
-    if (!ct3d->lsa) {
-        error_setg(errp, "lsa property must be set");
-        return false;
-    }
-
-    return true;
 }
 
 static DOEProtocol doe_cdat_prot[] = {
@@ -539,14 +514,9 @@ static void ct3_realize(PCIDevice *pci_dev, Error **errp)
     ComponentRegisters *regs = &cxl_cstate->crb;
     MemoryRegion *mr = &regs->component_registers;
     uint8_t *pci_conf = pci_dev->config;
-    unsigned short msix_num = 1;
-    int i, rc;
+    int rc;
 
     QTAILQ_INIT(&ct3d->error_list);
-
-    if (!cxl_setup_memory(ct3d, errp)) {
-        return;
-    }
 
     pci_config_set_prog_interface(pci_conf, 0x10);
 
@@ -577,14 +547,15 @@ static void ct3_realize(PCIDevice *pci_dev, Error **errp)
                          PCI_BASE_ADDRESS_MEM_TYPE_64,
                      &ct3d->cxl_dstate.device_registers);
 
-    /* MSI(-X) Initailization */
-    rc = msix_init_exclusive_bar(pci_dev, msix_num, 4, NULL);
-    if (rc) {
-        goto err_address_space_free;
-    }
-    for (i = 0; i < msix_num; i++) {
-        msix_vector_use(pci_dev, i);
-    }
+    // /* MSI(-X) Initailization */
+    // rc = msix_init_exclusive_bar(pci_dev, msix_num, 4, NULL);
+    // if (rc) {
+    //     goto err_address_space_free;
+    // }
+    // for (i = 0; i < msix_num; i++) {
+    //     msix_vector_use(pci_dev, i);
+    // }
+
 
     /* DOE Initailization */
     pcie_doe_init(pci_dev, &ct3d->doe_cdat, 0x190, doe_cdat_prot, true, 0);
@@ -606,9 +577,6 @@ static void ct3_realize(PCIDevice *pci_dev, Error **errp)
 err_release_cdat:
     cxl_doe_cdat_release(cxl_cstate);
     g_free(regs->special_ops);
-err_address_space_free:
-    address_space_destroy(&ct3d->hostmem_as);
-    return;
 }
 
 static void ct3_exit(PCIDevice *pci_dev)
@@ -634,6 +602,7 @@ static bool cxl_type3_dpa(CXLType3Dev *ct3d, hwaddr host_addr, uint64_t *dpa)
     decoder_base = (((uint64_t)cache_mem[R_CXL_HDM_DECODER0_BASE_HI] << 32) |
                     cache_mem[R_CXL_HDM_DECODER0_BASE_LO]);
     if ((uint64_t)host_addr < decoder_base) {
+        trace_cxl_type3_decoder_base_error(host_addr, decoder_base);
         return false;
     }
 
@@ -642,6 +611,7 @@ static bool cxl_type3_dpa(CXLType3Dev *ct3d, hwaddr host_addr, uint64_t *dpa)
     decoder_size = ((uint64_t)cache_mem[R_CXL_HDM_DECODER0_SIZE_HI] << 32) |
         cache_mem[R_CXL_HDM_DECODER0_SIZE_LO];
     if (hpa_offset >= decoder_size) {
+        trace_cxl_type3_decoder_size_error(hpa_offset, decoder_size);
         return false;
     }
 
@@ -688,6 +658,7 @@ MemTxResult cxl_type3_write(PCIDevice *d, hwaddr host_addr, uint64_t data,
 
     mr = host_memory_backend_get_memory(ct3d->hostmem);
     if (!mr) {
+        trace_cxl_type3_debug_message("backend memory not found");
         return MEMTX_OK;
     }
 
@@ -696,6 +667,7 @@ MemTxResult cxl_type3_write(PCIDevice *d, hwaddr host_addr, uint64_t data,
     }
 
     if (dpa_offset > int128_get64(mr->size)) {
+        trace_cxl_type3_debug_message("DPA offset is greater than the memory backend size");
         return MEMTX_OK;
     }
     return address_space_write(&ct3d->hostmem_as, dpa_offset, attrs,
@@ -929,7 +901,7 @@ static void ct3_class_init(ObjectClass *oc, void *data)
     pc->config_read = ct3d_config_read;
 
     set_bit(DEVICE_CATEGORY_STORAGE, dc->categories);
-    dc->desc = "CXL PMEM Device (Type 3)";
+    dc->desc = "CXL Memory Device (Type 3)";
     dc->reset = ct3d_reset;
     device_class_set_props(dc, ct3_props);
 

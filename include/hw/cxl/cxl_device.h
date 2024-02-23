@@ -2,6 +2,7 @@
  * QEMU CXL Devices
  *
  * Copyright (c) 2020 Intel
+ * Copyright (c) 2024 EEUM, Inc.
  *
  * This work is licensed under the terms of the GNU GPL, version 2. See the
  * COPYING file in the top-level directory.
@@ -11,6 +12,7 @@
 #define CXL_DEVICE_H
 
 #include "hw/cxl/cxl_component.h"
+#include "hw/cxl/cxl_packet.h"
 #include "hw/pci/pci_device.h"
 #include "hw/register.h"
 
@@ -164,7 +166,7 @@ REG64(CXL_DEV_CAP_ARRAY, 0) /* Documented as 128 bit register but 64 byte access
         FIELD(CXL_DEV_##n##_CAP_HDR2, CAP_LENGTH, 0, 32)
 
 CXL_DEVICE_CAPABILITY_HEADER_REGISTER(DEVICE_STATUS, CXL_DEVICE_CAP_HDR1_OFFSET)
-CXL_DEVICE_CAPABILITY_HEADER_REGISTER(MAILBOX, CXL_DEVICE_CAP_HDR1_OFFSET + \
+CXL_DEVICE_CAPABILITY_HEADER_REGISTER(MAILBOX, CXL_DEVICE_CAP_HDR1_OFFSET +
                                                CXL_DEVICE_CAP_REG_SIZE)
 CXL_DEVICE_CAPABILITY_HEADER_REGISTER(MEMORY_DEVICE,
                                       CXL_DEVICE_CAP_HDR1_OFFSET +
@@ -240,6 +242,82 @@ typedef struct CXLError {
 
 typedef QTAILQ_HEAD(, CXLError) CXLErrorList;
 
+struct CXLType1Dev {
+    /* Private */
+    PCIDevice parent_obj;
+
+    /* Properties */
+    HostMemoryBackend *hostmem;
+    HostMemoryBackend *lsa;
+    uint64_t sn;
+
+    /* State */
+    AddressSpace hostmem_as;
+    CXLComponentState cxl_cstate;
+    CXLDeviceState cxl_dstate;
+
+    /* DOE */
+    DOECap doe_cdat;
+
+    /* Error injection */
+    CXLErrorList error_list;
+};
+
+#define TYPE_CXL_TYPE1 "cxl-type1"
+
+OBJECT_DECLARE_TYPE(CXLType1Dev, CXLType1Class, CXL_TYPE1)
+
+struct CXLType1Class {
+    /* Private */
+    PCIDeviceClass parent_class;
+
+    /* public */
+    uint64_t (*get_lsa_size)(CXLType1Dev *ct1d);
+
+    uint64_t (*get_lsa)(CXLType1Dev *ct1d, void *buf, uint64_t size,
+                        uint64_t offset);
+    void (*set_lsa)(CXLType1Dev *ct1d, const void *buf, uint64_t size,
+                    uint64_t offset);
+};
+
+struct CXLType2Dev {
+    /* Private */
+    PCIDevice parent_obj;
+
+    /* Properties */
+    HostMemoryBackend *hostmem;
+    HostMemoryBackend *lsa;
+    uint64_t sn;
+
+    /* State */
+    AddressSpace hostmem_as;
+    CXLComponentState cxl_cstate;
+    CXLDeviceState cxl_dstate;
+
+    /* DOE */
+    DOECap doe_cdat;
+
+    /* Error injection */
+    CXLErrorList error_list;
+};
+
+#define TYPE_CXL_TYPE2 "cxl-type2"
+
+OBJECT_DECLARE_TYPE(CXLType2Dev, CXLType2Class, CXL_TYPE2)
+
+struct CXLType2Class {
+    /* Private */
+    PCIDeviceClass parent_class;
+
+    /* public */
+    uint64_t (*get_lsa_size)(CXLType2Dev *ct2d);
+
+    uint64_t (*get_lsa)(CXLType2Dev *ct2d, void *buf, uint64_t size,
+                        uint64_t offset);
+    void (*set_lsa)(CXLType2Dev *ct2d, const void *buf, uint64_t size,
+                    uint64_t offset);
+};
+
 struct CXLType3Dev {
     /* Private */
     PCIDevice parent_obj;
@@ -262,6 +340,7 @@ struct CXLType3Dev {
 };
 
 #define TYPE_CXL_TYPE3 "cxl-type3"
+
 OBJECT_DECLARE_TYPE(CXLType3Dev, CXLType3Class, CXL_TYPE3)
 
 struct CXLType3Class {
@@ -277,9 +356,45 @@ struct CXLType3Class {
                     uint64_t offset);
 };
 
-MemTxResult cxl_type3_read(PCIDevice *d, hwaddr host_addr, uint64_t *data,
-                           unsigned size, MemTxAttrs attrs);
-MemTxResult cxl_type3_write(PCIDevice *d, hwaddr host_addr, uint64_t data,
-                            unsigned size, MemTxAttrs attrs);
+struct CXLType3RemoteDev
+{
+    /* Private */
+    PCIDevice parent_obj;
+    MemoryRegion bar0;
+};
 
+#define TYPE_CXL_TYPE3_REMOTE "cxl-type3-remote"
+OBJECT_DECLARE_TYPE(CXLType3RemoteDev, CXLType3RemoteClass, CXL_TYPE3_REMOTE)
+
+struct CXLType3RemoteClass
+{
+    /* Private */
+    PCIDeviceClass parent_class;
+};
+
+MemTxResult cxl_type1_read(PCIDevice *d, hwaddr host_addr, uint64_t *data, unsigned size, MemTxAttrs attrs);
+MemTxResult cxl_type1_write(PCIDevice *d, hwaddr host_addr, uint64_t *data, unsigned size, MemTxAttrs attrs);
+D2HRsp cxl_type1_access(PCIDevice *d, CXLCacheReq req, uint8_t *buf, unsigned size, MemTxAttrs attrs);
+H2DRsp cxl_type1_response(PCIDevice *d, CXLCacheReq req, uint8_t *buf, unsigned size, MemTxAttrs attrs);
+
+S2MRsp cxl_type2_access(PCIDevice *d, CXLMemReq req, uint8_t *buf, unsigned size, MemTxAttrs attrs);
+M2SRsp_BIRsp cxl_type2_response(CXLMemReq req, MemTxAttrs attrs);
+
+MemTxResult cxl_type3_read(PCIDevice *d, hwaddr host_addr, uint64_t *data, unsigned size, MemTxAttrs attrs);
+MemTxResult cxl_type3_write(PCIDevice *d, hwaddr host_addr, uint64_t data, unsigned size, MemTxAttrs attrs);
+
+bool cxl_is_remote_root_port(PCIDevice *d);
+PCIDevice *cxl_get_root_port(PCIDevice *d);
+
+MemTxResult cxl_remote_cxl_mem_read(PCIDevice *d, hwaddr host_addr, uint64_t *data,
+                                    unsigned size, MemTxAttrs attrs);
+MemTxResult cxl_remote_cxl_mem_write(PCIDevice *d, hwaddr host_addr, uint64_t data,
+                                     unsigned size, MemTxAttrs attrs);
+
+void cxl_remote_config_space_read(PCIDevice *d, uint16_t bdf, uint32_t offset,
+                                  uint32_t *val, int size);
+void cxl_remote_config_space_write(PCIDevice *d, uint16_t bdf, uint32_t offset,
+                                   uint32_t val, int size);
+void cxl_remote_mem_read(PCIDevice *d, uint64_t addr, uint64_t *val, int size);
+void cxl_remote_mem_write(PCIDevice *d, uint64_t addr, uint64_t val, int size);
 #endif

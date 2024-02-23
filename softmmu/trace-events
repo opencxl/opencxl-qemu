@@ -31,6 +31,10 @@ runstate_set(int current_state, const char *current_state_str, int new_state, co
 system_wakeup_request(int reason) "reason=%d"
 qemu_system_shutdown_request(int reason) "reason=%d"
 qemu_system_powerdown_request(void) ""
+vl_debug_message(const char *dev) "%s"
+
+# qdev-monitor.c
+qdev_device_add_driver(const char *driver) "driver: %s"
 
 #dirtylimit.c
 dirtylimit_state_initialize(int max_cpus) "dirtylimit state initialize: max cpus %d"

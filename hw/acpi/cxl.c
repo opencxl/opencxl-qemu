@@ -104,7 +104,7 @@ static void cedt_build_cfmws(GArray *table_data, CXLState *cxls)
         build_append_int_noprefix(table_data, fw->enc_int_gran, 4);
 
         /* Window Restrictions */
-        build_append_int_noprefix(table_data, 0x0f, 2); /* No restrictions */
+        build_append_int_noprefix(table_data, 0x06, 2); /* No restrictions */
 
         /* QTG ID */
         build_append_int_noprefix(table_data, 0, 2);

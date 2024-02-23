@@ -14,6 +14,7 @@
 #include "qemu/log.h"
 #include "qemu/units.h"
 #include "qemu/uuid.h"
+#include "trace.h"
 
 #define CXL_CAPACITY_MULTIPLIER   (256 * MiB)
 
@@ -286,8 +287,8 @@ static ret_code cmd_identify_memory_device(struct cxl_cmd *cmd,
     } QEMU_PACKED *id;
     QEMU_BUILD_BUG_ON(sizeof(*id) != 0x43);
 
-    CXLType3Dev *ct3d = container_of(cxl_dstate, CXLType3Dev, cxl_dstate);
-    CXLType3Class *cvc = CXL_TYPE3_GET_CLASS(ct3d);
+    // CXLType3Dev *ct3d = container_of(cxl_dstate, CXLType3Dev, cxl_dstate);
+    // CXLType3Class *cvc = CXL_TYPE3_GET_CLASS(ct3d);
     uint64_t size = cxl_dstate->pmem_size;
 
     if (!QEMU_IS_ALIGNED(size, CXL_CAPACITY_MULTIPLIER)) {
@@ -297,12 +298,13 @@ static ret_code cmd_identify_memory_device(struct cxl_cmd *cmd,
     id = (void *)cmd->payload;
     memset(id, 0, sizeof(*id));
 
-    /* PMEM only */
-    snprintf(id->fw_revision, 0x10, "BWFW VERSION %02d", 0);
+    snprintf(id->fw_revision, 0x10, "EEUM FW VER. %d", 1);
 
     id->total_capacity = size / CXL_CAPACITY_MULTIPLIER;
-    id->persistent_capacity = size / CXL_CAPACITY_MULTIPLIER;
-    id->lsa_size = cvc->get_lsa_size(ct3d);
+    id->persistent_capacity = 0; // We don't support PMEM
+    id->volatile_capacity = size / CXL_CAPACITY_MULTIPLIER;
+    id->lsa_size = 0; // cvc->get_lsa_size(ct3d);
+    id->partition_align = 0;
 
     *len = sizeof(*id);
     return CXL_MBOX_SUCCESS;
@@ -435,6 +437,7 @@ void cxl_process_mailbox(CXLDeviceState *cxl_dstate)
         if (len == cxl_cmd->in || cxl_cmd->in == ~0) {
             cxl_cmd->payload = cxl_dstate->mbox_reg_state +
                 A_CXL_DEV_CMD_PAYLOAD;
+            trace_cxl_mailbox_process(set, cmd);
             ret = (*h)(cxl_cmd, cxl_dstate, &len);
             assert(len <= cxl_dstate->payload_size);
         } else {

@@ -10,6 +10,7 @@
 
 #include "qemu/osdep.h"
 #include "qemu/log.h"
+#include "hw/cxl/cxl.h"
 #include "hw/qdev-properties.h"
 #include "hw/pci/msi.h"
 #include "hw/pci/pcie.h"
@@ -22,20 +23,6 @@
 #define CXL_UPSTREAM_PORT_AER_OFFSET 0x100
 #define CXL_UPSTREAM_PORT_DVSEC_OFFSET \
     (CXL_UPSTREAM_PORT_AER_OFFSET + PCI_ERR_SIZEOF)
-
-typedef struct CXLUpstreamPort {
-    /*< private >*/
-    PCIEPort parent_obj;
-
-    /*< public >*/
-    CXLComponentState cxl_cstate;
-    DOECap doe_cdat;
-} CXLUpstreamPort;
-
-CXLComponentState *cxl_usp_to_cstate(CXLUpstreamPort *usp)
-{
-    return &usp->cxl_cstate;
-}
 
 static void cxl_usp_dvsec_write_config(PCIDevice *dev, uint32_t addr,
                                        uint32_t val, int len)

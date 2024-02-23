@@ -762,6 +762,7 @@ void pc_machine_done(Notifier *notifier, void *data)
                                         PCMachineState, machine_done);
     X86MachineState *x86ms = X86_MACHINE(pcms);
 
+    trace_pc_debug_message("Callback pc_machine_done started");
     cxl_hook_up_pxb_registers(pcms->bus, &pcms->cxl_devices_state,
                               &error_fatal);
 
@@ -781,6 +782,8 @@ void pc_machine_done(Notifier *notifier, void *data)
         /* update FW_CFG_NB_CPUS to account for -device added CPUs */
         fw_cfg_modify_i16(x86ms->fw_cfg, FW_CFG_NB_CPUS, x86ms->boot_cpus);
     }
+
+    trace_pc_debug_message("Callback pc_machine_done completed");
 }
 
 void pc_guest_info_init(PCMachineState *pcms)

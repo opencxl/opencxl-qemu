@@ -1,0 +1,9 @@
+# See docs/devel/tracing.rst for syntax documentation.
+
+# cxl-host.c
+cxl_read_cfmws(const char *dev, uint64_t addr, unsigned size, uint64_t data) "%s: @0x%"PRIx64"[0x%x] R: 0x%"PRIx64
+cxl_write_cfmws(const char *dev, uint64_t addr, unsigned size, uint64_t data) "%s: @0x%"PRIx64"[0x%x] W: 0x%"PRIx64
+cxl_debug_message(const char *dev) "%s"
+cxl_debug_64bit_read(const char *dev, uint64_t addr,  unsigned size, uint64_t data) "%s: @0x%"PRIx64"[%dB] R: 0x%"PRIx64
+cxl_debug_64bit_write(const char *dev, uint64_t addr,  unsigned size, uint64_t data) "%s: @0x%"PRIx64"[%dB] W: 0x%"PRIx64
+cxl_mailbox_process(uint8_t set, uint8_t command) "Processing Mailbox Opcode 0x%02x%02x"

@@ -17,6 +17,7 @@
 #include "qemu/module.h"
 #include "hw/pci/pcie_port.h"
 #include "hw/qdev-properties.h"
+#include "trace.h"
 
 static void rp_aer_vector_update(PCIDevice *d)
 {
@@ -66,6 +67,8 @@ static void rp_realize(PCIDevice *d, Error **errp)
     PCIDeviceClass *dc = PCI_DEVICE_GET_CLASS(d);
     PCIERootPortClass *rpc = PCIE_ROOT_PORT_GET_CLASS(d);
     int rc;
+
+    trace_cxl_root_debug_message("Realizing PCIERootPortClass instance");
 
     pci_config_set_interrupt_pin(d->config, 1);
     if (d->cap_present & QEMU_PCIE_CAP_CXL) {
@@ -120,6 +123,8 @@ static void rp_realize(PCIDevice *d, Error **errp)
     if (rpc->acs_offset && !s->disable_acs) {
         pcie_acs_init(d, rpc->acs_offset);
     }
+
+    trace_cxl_root_debug_message("Realized PCIERootPortClass instance");
     return;
 
 err:

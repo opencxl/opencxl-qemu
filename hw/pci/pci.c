@@ -166,6 +166,9 @@ static void pcie_bus_realize(BusState *qbus, Error **errp)
 
         if (pci_bus_allows_extended_config_space(parent_bus)) {
             bus->flags |= PCI_BUS_EXTENDED_CONFIG_SPACE;
+            trace_pci_bus_extended(parent_bus->qbus.name);
+        } else {
+            trace_pci_bus_not_extended(parent_bus->qbus.name);
         }
     }
 }
@@ -1076,6 +1079,7 @@ static PCIReqIDCache pci_req_id_cache_get(PCIDevice *dev)
         /* We are under PCI/PCIe bridges */
         parent = pci_get_bus(dev)->parent_dev;
         if (pci_is_express(parent)) {
+            trace_pci_debug_msg("Parent is PCIE Bus");
             if (pcie_cap_get_type(parent) == PCI_EXP_TYPE_PCI_BRIDGE) {
                 /* When we pass through PCIe-to-PCI/PCIX bridges, we
                  * override the requester ID using secondary bus
@@ -1085,6 +1089,7 @@ static PCIReqIDCache pci_req_id_cache_get(PCIDevice *dev)
                 cache.dev = dev;
             }
         } else {
+            trace_pci_debug_msg("Parent is not PCIE Bus");
             /* Legacy PCI, override requester ID with the bridge's
              * BDF upstream.  When the root complex connects to
              * legacy PCI devices (including buses), it can only
@@ -1128,6 +1133,8 @@ static PCIDevice *do_pci_register_device(PCIDevice *pci_dev,
     DeviceState *dev = DEVICE(pci_dev);
     PCIBus *bus = pci_get_bus(pci_dev);
     bool is_bridge = IS_PCI_BRIDGE(pci_dev);
+
+    trace_pci_debug_msg("Starting do_pci_register_device");
 
     /* Only pci bridges can be attached to extra PCI root buses */
     if (pci_bus_is_root(bus) && bus->parent_dev && !is_bridge) {
@@ -1173,7 +1180,11 @@ static PCIDevice *do_pci_register_device(PCIDevice *pci_dev,
     }
 
     pci_dev->devfn = devfn;
+
+    trace_pci_debug_msg("Getting REQ ID Cache");
     pci_dev->requester_id_cache = pci_req_id_cache_get(pci_dev);
+    trace_pci_debug_msg("Received REQ ID Cache");
+
     pstrcpy(pci_dev->name, sizeof(pci_dev->name), name);
 
     memory_region_init(&pci_dev->bus_master_container_region, OBJECT(pci_dev),
@@ -1227,6 +1238,9 @@ static PCIDevice *do_pci_register_device(PCIDevice *pci_dev,
     pci_dev->config_write = config_write;
     bus->devices[devfn] = pci_dev;
     pci_dev->version_id = 2; /* Current pci device vmstate version */
+
+    trace_pci_debug_msg("Completed do_pci_register_device");
+
     return pci_dev;
 }
 
@@ -2042,6 +2056,8 @@ static void pci_qdev_realize(DeviceState *qdev, Error **errp)
     bool is_default_rom;
     uint16_t class_id;
 
+    trace_pci_debug_msg("Realizing PciDevice");
+
     /*
      * capped by systemd (see: udev-builtin-net_id.c)
      * as it's the only known user honor it to avoid users
@@ -2144,6 +2160,8 @@ static void pci_qdev_realize(DeviceState *qdev, Error **errp)
     pci_set_power(pci_dev, true);
 
     pci_dev->msi_trigger = pci_msi_trigger;
+
+    trace_pci_debug_msg("Realized PciDevice");
 }
 
 PCIDevice *pci_new_multifunction(int devfn, bool multifunction,

@@ -27,6 +27,13 @@
 #include "hw/sysbus.h"
 #include "qapi/error.h"
 #include "hw/cxl/cxl.h"
+#include "hw/cxl/cxl_emulator_packet.h"
+#include "hw/cxl/cxl_socket_transport.h"
+#include "trace.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define CXL_ROOT_PORT_DID 0x7075
 
@@ -47,10 +54,266 @@ typedef struct CXLRootPort {
 
     CXLComponentState cxl_cstate;
     PCIResReserve res_reserve;
+
+    char *socket_host;
+    uint32_t socket_port;
+    uint32_t switch_port;
+    int socket_fd;
 } CXLRootPort;
 
 #define TYPE_CXL_ROOT_PORT "cxl-rp"
 DECLARE_INSTANCE_CHECKER(CXLRootPort, CXL_ROOT_PORT, TYPE_CXL_ROOT_PORT)
+
+bool cxl_is_remote_root_port(PCIDevice *d)
+{
+    if (!object_dynamic_cast(OBJECT(d), TYPE_CXL_ROOT_PORT)) {
+        return false;
+    }
+    CXLRootPort *crp = CXL_ROOT_PORT(d);
+    return crp->socket_host != NULL;
+}
+
+
+PCIDevice *cxl_get_root_port(PCIDevice *d)
+{
+    PCIBus *bus = pci_get_bus(d);
+
+    while (!pci_bus_is_root(bus)) {
+        d = bus->parent_dev;
+        if (cxl_is_remote_root_port(d)) {
+            return d;
+        }
+
+        bus = pci_get_bus(d);
+    }
+    return NULL;
+}
+
+
+MemTxResult cxl_remote_cxl_mem_read(PCIDevice *d, hwaddr host_addr,
+                                    uint64_t *data, unsigned size,
+                                    MemTxAttrs attrs)
+{
+    trace_cxl_root_cxl_cxl_mem_read(host_addr);
+
+    CXLRootPort *crp = CXL_ROOT_PORT(d);
+
+    uint16_t tag;
+    if (!send_cxl_mem_mem_read(crp->socket_fd, host_addr, &tag)) {
+        trace_cxl_root_debug_message("Failed to send CXL.mem MEM RD request");
+        *data = 0xFFFFFFFF;
+        return MEMTX_OK;
+    }
+
+    cxl_mem_s2m_drs_packet_t *cxl_packet =
+        wait_for_cxl_mem_mem_data(crp->socket_fd, tag);
+    if (cxl_packet == NULL) {
+        release_packet_entry(tag);
+        trace_cxl_root_debug_message("Failed to get CXL.mem MEM DATA response");
+        *data = 0xFFFFFFFF;
+        return MEMTX_OK;
+    }
+
+    *data = *(uint64_t *)(cxl_packet->data);
+    release_packet_entry(tag);
+
+    return MEMTX_OK;
+}
+
+
+MemTxResult cxl_remote_cxl_mem_write(PCIDevice *d, hwaddr host_addr,
+                                     uint64_t data, unsigned size,
+                                     MemTxAttrs attrs)
+{
+    trace_cxl_root_cxl_cxl_mem_write(host_addr);
+
+    CXLRootPort *crp = CXL_ROOT_PORT(d);
+
+    uint16_t tag;
+    uint8_t data_bytes[CXL_MEM_ACCESS_UNIT];
+    *(uint64_t *)(data_bytes) = data;
+
+    if (!send_cxl_mem_mem_write(crp->socket_fd, host_addr, data_bytes, &tag)) {
+        trace_cxl_root_debug_message("Failed to send CXL.mem MEM WR request");
+        return MEMTX_OK;
+    }
+
+    cxl_mem_s2m_ndr_packet_t *cxl_packet =
+        wait_for_cxl_mem_completion(crp->socket_fd, tag);
+    release_packet_entry(tag);
+    if (cxl_packet == NULL) {
+        trace_cxl_root_debug_message("Failed to get CXL.mem MEM DATA response");
+        return MEMTX_OK;
+    }
+
+    return MEMTX_OK;
+}
+
+
+void cxl_remote_mem_read(PCIDevice *d, uint64_t addr, uint64_t *val, int size)
+{
+    trace_cxl_root_cxl_io_mmio_read(addr, size);
+
+    CXLRootPort *crp = CXL_ROOT_PORT(d);
+    uint16_t tag;
+
+    if (!send_cxl_io_mem_read(crp->socket_fd, addr, size, &tag)) {
+        trace_cxl_root_debug_message("Failed to send CXL.io MEM RD request");
+        assert(0);
+    }
+
+    cxl_io_completion_data_packet_t *cxl_packet =
+        wait_for_cxl_io_completion_data(crp->socket_fd, tag);
+    if (cxl_packet == NULL) {
+        release_packet_entry(tag);
+        trace_cxl_root_debug_message("Failed to get CXL.io CPLD response");
+        assert(0);
+    }
+
+    *val = cxl_packet->data;
+    release_packet_entry(tag);
+}
+
+
+void cxl_remote_mem_write(PCIDevice *d, uint64_t addr, uint64_t val, int size)
+{
+    trace_cxl_root_cxl_io_mmio_write(addr, size, val);
+
+    CXLRootPort *crp = CXL_ROOT_PORT(d);
+    uint16_t tag;
+
+    if (!send_cxl_io_mem_write(crp->socket_fd, addr, val, size, &tag)) {
+        trace_cxl_root_debug_message("Failed to send CXL.io MEM WR request");
+        assert(0);
+    }
+
+    cxl_io_completion_packet_t *cxl_packet =
+        wait_for_cxl_io_completion(crp->socket_fd, tag);
+    release_packet_entry(tag);
+    if (cxl_packet == NULL) {
+        trace_cxl_root_debug_message("Failed to get CXL.io CPL response");
+        assert(0);
+    }
+}
+
+
+static bool is_type0_config_request(PCIDevice *root_port, uint16_t bdf)
+{
+    uint8_t secondary_bus = root_port->config[PCI_SECONDARY_BUS];
+    uint16_t bus = bdf >> 8;
+    return bus == secondary_bus;
+}
+
+
+static bool is_valid_bdf(PCIDevice *d, uint16_t bdf)
+{
+    uint8_t secondary_bus = d->config[PCI_SECONDARY_BUS];
+    uint8_t subordinate_bus = d->config[PCI_SUBORDINATE_BUS];
+    uint16_t bus = bdf >> 8;
+    return bus >= secondary_bus && bus <= subordinate_bus;
+}
+
+
+void cxl_remote_config_space_read(PCIDevice *d, uint16_t bdf, uint32_t offset,
+                                  uint32_t *val, int size)
+{
+    if (!is_valid_bdf(d, bdf)) {
+        trace_cxl_root_debug_message("Invalid BDF received");
+        assert(0);
+    }
+
+    CXLRootPort *crp = CXL_ROOT_PORT(d);
+    bool type0 = is_type0_config_request(d, bdf);
+    uint16_t tag;
+    const uint8_t bus = bdf >> 8;
+    const uint8_t device = bdf & 0x1F >> 3;
+    const uint8_t function = bdf & 0x7;
+
+    if (type0) {
+        trace_cxl_root_cxl_io_config_space_read0(bus, device, function, offset,
+                                                 size);
+    } else {
+        trace_cxl_root_cxl_io_config_space_read1(bus, device, function, offset,
+                                                 size);
+    }
+
+    if (!send_cxl_io_config_space_read(crp->socket_fd, bdf, offset, size, type0,
+                                       &tag)) {
+        trace_cxl_root_debug_message("Failed to send CXL.io CFG RD request");
+        assert(0);
+    }
+
+    wait_for_cxl_io_cfg_completion(crp->socket_fd, tag, val);
+
+    release_packet_entry(tag);
+}
+
+
+void cxl_remote_config_space_write(PCIDevice *d, uint16_t bdf, uint32_t offset,
+                                   uint32_t val, int size)
+{
+    if (!is_valid_bdf(d, bdf)) {
+        trace_cxl_root_debug_message("Invalid BDF received");
+        assert(0);
+    }
+
+    CXLRootPort *crp = CXL_ROOT_PORT(d);
+    bool type0 = is_type0_config_request(d, bdf);
+    uint16_t tag;
+    const uint8_t bus = bdf >> 8;
+    const uint8_t device = bdf & 0x1F >> 3;
+    const uint8_t function = bdf & 0x7;
+
+    if (type0) {
+        trace_cxl_root_cxl_io_config_space_write0(bus, device, function, offset,
+                                                  size, val);
+    } else {
+        trace_cxl_root_cxl_io_config_space_write1(bus, device, function, offset,
+                                                  size, val);
+    }
+
+    if (!send_cxl_io_config_space_write(crp->socket_fd, bdf, offset, val, size,
+                                        type0, &tag)) {
+        trace_cxl_root_debug_message("Failed to send CXL.io CFG WR request");
+        assert(0);
+    }
+
+    wait_for_cxl_io_cfg_completion(crp->socket_fd, tag, NULL);
+
+    release_packet_entry(tag);
+}
+
+
+static uint16_t get_number_of_ports(PCIDevice *usp, PCIDevice *rp)
+{
+    const uint16_t root_bus = 0;
+    const uint16_t usp_bus = 1;
+
+    // Set RP BUS
+    rp->config[PCI_SECONDARY_BUS] = root_bus;
+    rp->config[PCI_SUBORDINATE_BUS] = usp_bus;
+
+    // Set USP BUS
+    cxl_remote_config_space_write(rp, PCI_BUILD_BDF(root_bus, 0),
+                                  PCI_SECONDARY_BUS, usp_bus, 1);
+    cxl_remote_config_space_write(rp, PCI_BUILD_BDF(root_bus, 0),
+                                  PCI_SUBORDINATE_BUS, usp_bus, 1);
+
+    // Scan DSPs
+    const uint16_t max_devices = 32;
+    uint16_t ports = 0;
+    for (uint16_t device_id = 0; device_id < max_devices; ++device_id) {
+        const uint16_t devfn = device_id << 3;
+        uint32_t val = 0xFFFF;
+        cxl_remote_config_space_read(rp, PCI_BUILD_BDF(usp_bus, devfn), 0, &val,
+                                     2);
+        if (val != 0xFFFF) {
+            ports += 1;
+        }
+    }
+
+    return ports;
+}
 
 /*
  * If two MSI vector are allocated, Advanced Error Interrupt Message Number
@@ -143,6 +406,94 @@ static void build_dvsecs(CXLComponentState *cxl)
                                REG_LOC_DVSEC_REVID, dvsec);
 }
 
+
+static bool cxl_rp_init_socket_client(CXLRootPort *crp)
+{
+    crp->socket_fd = create_socket_client(crp->socket_host, crp->socket_port);
+    if (crp->socket_fd < 0) {
+        return false;
+    }
+
+    if (!send_sideband_connection_request(crp->socket_fd, crp->switch_port)) {
+        trace_cxl_root_debug_message(
+            "CXL Root Port: Failed to send connection request");
+        return false;
+    }
+
+    base_sideband_packet_t *packet =
+        wait_for_base_sideband_packet(crp->socket_fd);
+    const uint16_t tag = 0;
+    if (packet == NULL) {
+        release_packet_entry(tag);
+        trace_cxl_root_debug_message(
+            "CXL Root Port: Failed to get connection response");
+        return false;
+    }
+
+    if (packet->sideband_header.type != SIDEBAND_CONNECTION_ACCEPT) {
+        release_packet_entry(tag);
+        trace_cxl_root_debug_message(
+            "CXL Root Port: Connection request was not accepted");
+        return false;
+    }
+    release_packet_entry(tag);
+    trace_cxl_root_debug_message(
+        "CXL Root Port: Successfully connected to switch");
+
+    return true;
+}
+
+
+static bool cxl_rp_enumerate_child_devices(CXLRootPort *crp, Error **errp)
+{
+    PCIBridge *pci_bridge = PCI_BRIDGE(crp);
+    PCIBus *bus = &pci_bridge->sec_bus;
+
+    bus->flags |= PCI_BUS_EXTENDED_CONFIG_SPACE;
+
+    trace_cxl_root_debug_message("Creating CXL Remote USP device");
+    DeviceState *usp = qdev_new(TYPE_CXL_REMOTE_USP);
+    trace_cxl_root_debug_message("Created CXL Remote USP device");
+    qdev_realize(DEVICE(usp), &bus->qbus, errp);
+
+    PCIBridge *usp_bridge = PCI_BRIDGE(usp);
+    PCIBus *usp_bus = &usp_bridge->sec_bus;
+    PCIDevice *usp_device = PCI_DEVICE(usp);
+    usp_device->exp.exp_cap = 0x40;
+    pci_set_word(&usp_device->config[0x42], 0b0101 << 4);
+
+    trace_cxl_root_debug_message("Getting number of ports under USP");
+    const uint8_t total_ports =
+        get_number_of_ports(usp_device, PCI_DEVICE(crp));
+    trace_cxl_root_debug_number("Found Ports: ", total_ports);
+
+    for (uint8_t port = 0; port < total_ports; ++port) {
+        trace_cxl_root_debug_message("Creating CXL Remote DSP device");
+        DeviceState *dsp = qdev_new(TYPE_CXL_REMOTE_DSP);
+        PCIESlot *dsp_slot = PCIE_SLOT(dsp);
+        PCIEPort *dsp_port = PCIE_PORT(dsp);
+        dsp_slot->chassis = 0;
+        dsp_slot->slot = 4 + port;
+        dsp_port->port = port;
+        trace_cxl_root_debug_message("Created CXL Remote DSP device");
+        qdev_realize(DEVICE(dsp), &usp_bus->qbus, errp);
+
+        PCIBridge *dsp_bridge = PCI_BRIDGE(dsp);
+        PCIBus *dsp_bus = &dsp_bridge->sec_bus;
+        PCIDevice *dsp_device = PCI_DEVICE(dsp);
+        dsp_device->exp.exp_cap = 0x40;
+        pci_set_word(&dsp_device->config[0x42], 0b0110 << 4);
+
+        trace_cxl_root_debug_message("Creating CXL Type3 Remote device");
+        DeviceState *ep = qdev_new(TYPE_CXL_TYPE3_REMOTE);
+        trace_cxl_root_debug_message("Created CXL Type3 Remote device");
+        qdev_realize(DEVICE(ep), &dsp_bus->qbus, errp);
+    }
+
+    return true;
+}
+
+
 static void cxl_rp_realize(DeviceState *dev, Error **errp)
 {
     PCIDevice *pci_dev     = PCI_DEVICE(dev);
@@ -152,6 +503,8 @@ static void cxl_rp_realize(DeviceState *dev, Error **errp)
     ComponentRegisters *cregs = &cxl_cstate->crb;
     MemoryRegion *component_bar = &cregs->component_registers;
     Error *local_err = NULL;
+
+    trace_cxl_root_debug_message("Realizing CXLRootPort Class instance");
 
     rpc->parent_realize(dev, &local_err);
     if (local_err) {
@@ -184,6 +537,20 @@ static void cxl_rp_realize(DeviceState *dev, Error **errp)
                      PCI_BASE_ADDRESS_SPACE_MEMORY |
                          PCI_BASE_ADDRESS_MEM_TYPE_64,
                      component_bar);
+
+    if (!cxl_is_remote_root_port(pci_dev)) {
+        return;
+    }
+
+    if (!cxl_rp_init_socket_client(crp)) {
+        return;
+    }
+
+    if (!cxl_rp_enumerate_child_devices(crp, errp)) {
+        return;
+    }
+
+    trace_cxl_root_debug_message("Realized CXLRootPort Class instance");
 }
 
 static void cxl_rp_reset_hold(Object *obj)
@@ -206,6 +573,9 @@ static Property gen_rp_props[] = {
                      -1),
     DEFINE_PROP_SIZE("pref64-reserve", CXLRootPort, res_reserve.mem_pref_64,
                      -1),
+    DEFINE_PROP_STRING("socket-host", CXLRootPort, socket_host),
+    DEFINE_PROP_UINT32("socket-port", CXLRootPort, socket_port, 8000),
+    DEFINE_PROP_UINT32("switch-port", CXLRootPort, switch_port, 0),
     DEFINE_PROP_END_OF_LIST()
 };
 

@@ -16,11 +16,14 @@
 #include "qapi/qapi-visit-machine.h"
 #include "hw/cxl/cxl.h"
 #include "hw/cxl/cxl_host.h"
+#include "hw/cxl/cxl_type1_hcoh.h"
+#include "hw/cxl/cxl_type2_hcoh.h"
 #include "hw/pci/pci_bus.h"
 #include "hw/pci/pci_bridge.h"
 #include "hw/pci/pci_host.h"
 #include "hw/pci/pcie_port.h"
 #include "hw/pci-bridge/pci_expander_bridge.h"
+#include "trace.h"
 
 static void cxl_fixed_memory_window_config(CXLState *cxl_state,
                                            CXLFixedMemoryWindowOptions *object,
@@ -128,9 +131,8 @@ static bool cxl_hdm_find_target(uint32_t *cache_mem, hwaddr addr,
 
 static PCIDevice *cxl_cfmws_find_device(CXLFixedWindow *fw, hwaddr addr)
 {
-    CXLComponentState *hb_cstate, *usp_cstate;
+    CXLComponentState *hb_cstate;
     PCIHostState *hb;
-    CXLUpstreamPort *usp;
     int rb_index;
     uint32_t *cache_mem;
     uint8_t target;
@@ -147,13 +149,16 @@ static PCIDevice *cxl_cfmws_find_device(CXLFixedWindow *fw, hwaddr addr)
     }
 
     if (cxl_get_hb_passthrough(hb)) {
+        trace_cxl_debug_message("CXL host bridge is passthrough");
         rp = pcie_find_port_first(hb->bus);
         if (!rp) {
+            trace_cxl_debug_message("CXL root port not found");
             return NULL;
         }
     } else {
         hb_cstate = cxl_get_hb_cstate(hb);
         if (!hb_cstate) {
+            trace_cxl_debug_message("CXL host bridge cstate doesn't exist");
             return NULL;
         }
 
@@ -170,6 +175,11 @@ static PCIDevice *cxl_cfmws_find_device(CXLFixedWindow *fw, hwaddr addr)
         }
     }
 
+    if (cxl_is_remote_root_port(rp)) {
+        trace_cxl_debug_message("CXL Root Port: Remote mode is enabled");
+        return rp;
+    }
+
     d = pci_bridge_get_sec_bus(PCI_BRIDGE(rp))->devices[0];
     if (!d) {
         return NULL;
@@ -179,74 +189,88 @@ static PCIDevice *cxl_cfmws_find_device(CXLFixedWindow *fw, hwaddr addr)
         return d;
     }
 
-    /*
-     * Could also be a switch.  Note only one level of switching currently
-     * supported.
-     */
-    if (!object_dynamic_cast(OBJECT(d), TYPE_CXL_USP)) {
-        return NULL;
-    }
-    usp = CXL_USP(d);
-
-    usp_cstate = cxl_usp_to_cstate(usp);
-    if (!usp_cstate) {
-        return NULL;
+    if (object_dynamic_cast(OBJECT(d), TYPE_CXL_TYPE2)) {
+        return d;
     }
 
-    cache_mem = usp_cstate->crb.cache_mem_registers;
-
-    target_found = cxl_hdm_find_target(cache_mem, addr, &target);
-    if (!target_found) {
-        return NULL;
+    if (object_dynamic_cast(OBJECT(d), TYPE_CXL_TYPE1)) {
+        return d;
     }
 
-    d = pcie_find_port_by_pn(&PCI_BRIDGE(d)->sec_bus, target);
-    if (!d) {
-        return NULL;
-    }
-
-    d = pci_bridge_get_sec_bus(PCI_BRIDGE(d))->devices[0];
-    if (!d) {
-        return NULL;
-    }
-
-    if (!object_dynamic_cast(OBJECT(d), TYPE_CXL_TYPE3)) {
-        return NULL;
-    }
-
-    return d;
+    return NULL;
 }
 
 static MemTxResult cxl_read_cfmws(void *opaque, hwaddr addr, uint64_t *data,
                                   unsigned size, MemTxAttrs attrs)
 {
+    MemTxResult result = MEMTX_ERROR;
     CXLFixedWindow *fw = opaque;
     PCIDevice *d;
+    const char *type;
 
     d = cxl_cfmws_find_device(fw, addr);
     if (d == NULL) {
         *data = 0;
         /* Reads to invalid address return poison */
-        return MEMTX_ERROR;
+        return result;
+    }
+    type = object_get_typename(OBJECT(d));
+
+    g_assert(addr < 0x8000000);
+
+    if (g_strcmp0(type, "cxl-type1") == 0)
+        result = cxl_type1_read(d, addr + fw->base, data, size, attrs);
+    else if (g_strcmp0(type, "cxl-type2") == 0)
+        result =
+            cxl_host_type2_hcoh_read(d, addr + fw->base, data, size, attrs);
+    else if (g_strcmp0(type, "cxl-type3") == 0) {
+        if (cxl_is_remote_root_port(d)) {
+            result =
+                cxl_remote_cxl_mem_read(d, addr + fw->base, data, size, attrs);
+            trace_cxl_read_cfmws("CXL.mem via RP", addr, size, *data);
+        } else {
+            result = cxl_type3_read(d, addr + fw->base, data, size, attrs);
+            trace_cxl_read_cfmws("CXL.mem", addr, size, *data);
+        }
     }
 
-    return cxl_type3_read(d, addr + fw->base, data, size, attrs);
+    return result;
 }
 
 static MemTxResult cxl_write_cfmws(void *opaque, hwaddr addr,
                                    uint64_t data, unsigned size,
                                    MemTxAttrs attrs)
 {
+    MemTxResult result = MEMTX_OK;
     CXLFixedWindow *fw = opaque;
     PCIDevice *d;
+    const char *type;
 
     d = cxl_cfmws_find_device(fw, addr);
     if (d == NULL) {
         /* Writes to invalid address are silent */
-        return MEMTX_OK;
+        return result;
     }
+    type = object_get_typename(OBJECT(d));
 
-    return cxl_type3_write(d, addr + fw->base, data, size, attrs);
+    g_assert(addr < 0x8000000);
+
+    if (g_strcmp0(type, "cxl-type1") == 0)
+        result = cxl_type1_write(d, addr + fw->base, &data, size, attrs);
+    else if (g_strcmp0(type, "cxl-type2") == 0)
+        result =
+            cxl_host_type2_hcoh_write(d, addr + fw->base, data, size, attrs);
+    else if (g_strcmp0(type, "cxl-type3") == 0) {
+        if (cxl_is_remote_root_port(d)) {
+            trace_cxl_write_cfmws("CXL.mem via RP", addr, size, data);
+            result =
+                cxl_remote_cxl_mem_write(d, addr + fw->base, data, size, attrs);
+        } else {
+            trace_cxl_write_cfmws("CXL.mem", addr, size, data);
+            result = cxl_type3_write(d, addr + fw->base, data, size, attrs);
+        }
+    }
+    return result;
 }
 
 const MemoryRegionOps cfmws_ops = {

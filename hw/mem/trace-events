@@ -2,7 +2,37 @@
 
 # pc-dimm.c
 mhp_pc_dimm_assigned_slot(int slot) "%d"
+
 # memory-device.c
 memory_device_pre_plug(const char *id, uint64_t addr) "id=%s addr=0x%"PRIx64
 memory_device_plug(const char *id, uint64_t addr) "id=%s addr=0x%"PRIx64
 memory_device_unplug(const char *id, uint64_t addr) "id=%s addr=0x%"PRIx64
+
+# cxl_type1.c
+cxl_type1_debug_message(const char *dev) "%s"
+cxl_type1_reg_write(uint64_t offset, uint64_t data) "CXL component register (EP): @0x%"PRIx64" W: 0x%"PRIx64
+cxl_type1_debug_32bit_read(const char *dev, uint32_t addr, int size, uint32_t data) "%s: @0x%x[%d] R: 0x%x"
+cxl_type1_debug_32bit_write(const char *dev, uint32_t addr, int size, uint32_t data) "%s: @0x%x[%d] W: 0x%x"
+cxl_type1_decoder_base_error(uint64_t host_addr, uint64_t decoder_base) "CXL Mem: ERROR: Host Address (0x%lx) < Decoder Base (0x%lx)"
+cxl_type1_decoder_size_error(uint64_t hpa_offset, uint64_t decoder_size) "CXL Mem: ERROR: HPA Offset (0x%lx) >= Decoder Size (0x%lx)"
+
+# cxl_type2.c
+cxl_type2_debug_message(const char *dev) "%s"
+cxl_type2_reg_write(uint64_t offset, uint64_t data) "CXL component register (EP): @0x%"PRIx64" W: 0x%"PRIx64
+cxl_type2_debug_32bit_read(const char *dev, uint32_t addr, int size, uint32_t data) "%s: @0x%x[%d] R: 0x%x"
+cxl_type2_debug_32bit_write(const char *dev, uint32_t addr, int size, uint32_t data) "%s: @0x%x[%d] W: 0x%x"
+cxl_type2_decoder_base_error(uint64_t host_addr, uint64_t decoder_base) "CXL Mem: ERROR: Host Address (0x%lx) < Decoder Base (0x%lx)"
+cxl_type2_decoder_size_error(uint64_t hpa_offset, uint64_t decoder_size) "CXL Mem: ERROR: HPA Offset (0x%lx) >= Decoder Size (0x%lx)"
+
+# cxl_type3.c
+cxl_type3_reg_write(uint64_t offset, uint64_t data) "CXL component register (EP): @0x%"PRIx64" W: 0x%"PRIx64
+cxl_type3_debug_32bit_read(const char *dev, uint32_t addr, int size, uint32_t data) "%s: @0x%x[%d] R: 0x%x"
+cxl_type3_debug_32bit_write(const char *dev, uint32_t addr, int size, uint32_t data) "%s: @0x%x[%d] W: 0x%x"
+cxl_type3_decoder_base_error(uint64_t host_addr, uint64_t decoder_base) "CXL Mem: ERROR: Host Address (0x%lx) < Decoder Base (0x%lx)"
+cxl_type3_decoder_size_error(uint64_t hpa_offset, uint64_t decoder_size) "CXL Mem: ERROR: HPA Offset (0x%lx) >= Decoder Size (0x%lx)"
+cxl_type3_debug_message(const char *dev) "%s"
+
+# cxl_type3_remote.c
+cxl_type3_remote_debug_message(const char *dev) "%s"
+cxl_type3_remote_debug_config_read(uint32_t val) "Received Config Space Read Completion. Data: 0x%x"
+cxl_type3_remote_debug_mmio_read(uint64_t val) "Received MMIO Read Completion. Data: 0x%"PRIx64

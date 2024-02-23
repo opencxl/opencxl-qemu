@@ -1,0 +1,17 @@
+FROM ubuntu:22.04
+
+EXPOSE 8000 8100 8200
+
+RUN apt update && apt install -y \
+        gcc make bzip2 \
+        iproute2 udhcpd \
+        libglib2.0-dev \
+        libfdt-dev \
+        libpixman-1-dev \
+        zlib1g-dev \
+        ninja-build libslirp-dev
+
+WORKDIR /opencxl-qemu/cxl_scripts
+
+ENTRYPOINT ["./start-vm.sh"]
+CMD ["0.0.0.0"]

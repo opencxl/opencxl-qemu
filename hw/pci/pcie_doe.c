@@ -17,6 +17,7 @@
 #include "hw/pci/pcie_doe.h"
 #include "hw/pci/msi.h"
 #include "hw/pci/msix.h"
+#include "trace.h"
 
 #define DWORD_BYTE 4
 
@@ -39,6 +40,8 @@ static bool pcie_doe_discovery(DOECap *doe_cap)
     DoeDiscoveryRsp rsp;
     uint8_t index = req->index;
     DOEProtocol *prot;
+
+    trace_pcie_doe_request_discovery(index);
 
     /* Discard request if length does not match DoeDiscoveryReq */
     if (pcie_doe_get_obj_len(req) <
@@ -211,6 +214,12 @@ static void pcie_doe_prepare_rsp(DOECap *doe_cap)
         return;
     }
 
+    uint32_t protocol = doe_cap->write_mbox[0];
+    uint16_t vendor_id = protocol & 0xFFFF;
+    uint8_t protocol_type = (protocol >> 8) & 0xFF;
+
+    trace_pcie_doe_request(vendor_id, protocol_type);
+
     if (doe_cap->write_mbox[0] ==
         DATA_OBJ_BUILD_HEADER1(PCI_VENDOR_ID_PCI_SIG, PCI_SIG_DOE_DISCOVERY)) {
         handle_request = pcie_doe_discovery;
@@ -296,7 +305,7 @@ bool pcie_doe_read_config(DOECap *doe_cap, uint32_t addr, int size,
  * Write to DOE config space.
  * Return if the address not within DOE_CAP range or receives an abort
  */
-void pcie_doe_write_config(DOECap *doe_cap,
+bool pcie_doe_write_config(DOECap *doe_cap,
                            uint32_t addr, uint32_t val, int size)
 {
     uint16_t doe_offset = doe_cap->offset;
@@ -304,7 +313,7 @@ void pcie_doe_write_config(DOECap *doe_cap,
 
     if (!range_covers_byte(doe_offset + PCI_EXP_DOE_CAP,
                            PCI_DOE_SIZEOF - 4, addr)) {
-        return;
+        return false;
     }
 
     /* Process Alignment */
@@ -318,7 +327,7 @@ void pcie_doe_write_config(DOECap *doe_cap,
             pcie_doe_set_ready(doe_cap, 0);
             pcie_doe_set_error(doe_cap, 0);
             pcie_doe_reset_mbox(doe_cap);
-            return;
+            return true;
         }
 
         if (FIELD_EX32(val, PCI_DOE_CAP_CONTROL, DOE_GO)) {
@@ -340,7 +349,7 @@ void pcie_doe_write_config(DOECap *doe_cap,
     case PCI_EXP_DOE_RD_DATA_MBOX:
         /* Mailbox should be DW accessed */
         if (size != DWORD_BYTE) {
-            return;
+            return true;
         }
         doe_cap->read_mbox_idx++;
         if (doe_cap->read_mbox_idx == doe_cap->read_mbox_len) {
@@ -354,7 +363,7 @@ void pcie_doe_write_config(DOECap *doe_cap,
     case PCI_EXP_DOE_WR_DATA_MBOX:
         /* Mailbox should be DW accessed */
         if (size != DWORD_BYTE) {
-            return;
+            return true;
         }
         doe_cap->write_mbox[doe_cap->write_mbox_len] = val;
         doe_cap->write_mbox_len++;
@@ -364,4 +373,6 @@ void pcie_doe_write_config(DOECap *doe_cap,
     default:
         break;
     }
+
+    return true;
 }

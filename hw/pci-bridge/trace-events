@@ -1,0 +1,30 @@
+# cxl_root_port.c
+cxl_root_debug_message(const char *dev) "%s"
+cxl_root_debug_number(const char *dev, uint32_t size) "%s: %u"
+cxl_root_cxl_io_config_space_write0(uint8_t bus, uint8_t device, uint8_t function, uint32_t offset, int size, uint32_t val) "CFG_WR0 [%02x:%02x.%d] @0x%03X[%dB]: 0x%X"
+cxl_root_cxl_io_config_space_write1(uint8_t bus, uint8_t device, uint8_t function, uint32_t offset, int size, uint32_t val) "CFG_WR1 [%02x:%02x.%d] @0x%03X[%dB]: 0x%X"
+cxl_root_cxl_io_config_space_read0(uint8_t bus, uint8_t device, uint8_t function, uint32_t offset, int size) "CFG_RD0 [%02x:%02x.%d] @0x%03X[%dB]"
+cxl_root_cxl_io_config_space_read1(uint8_t bus, uint8_t device, uint8_t function, uint32_t offset, int size) "CFG_RD1 [%02x:%02x.%d] @0x%03X[%dB]"
+cxl_root_cxl_io_mmio_write(uint64_t address, int size, uint64_t value) "MWR_64B @0x%"PRIx64"[%dB]: 0x%"PRIx64
+cxl_root_cxl_io_mmio_read(uint64_t address, int size) "MRD_64B @0x%"PRIx64"[%dB]"
+cxl_root_cxl_cxl_mem_write(uint64_t address) "MEM_WR @0x%"PRIx64
+cxl_root_cxl_cxl_mem_read(uint64_t address) "MEM_RD @0x%"PRIx64
+
+# cxl_upstream_remote.c
+cxl_usp_debug_message(const char *dev) "%s"
+
+# cxl_downstream_remote.c
+cxl_dsp_debug_message(const char *dev) "%s"
+
+cxl_mem_64bit_read(uint64_t addr,  unsigned size, uint64_t data) "@0x%"PRIx64"[%dB] R: 0x%"PRIx64
+cxl_mem_64bit_write(uint64_t addr,  unsigned size, uint64_t data) "@0x%"PRIx64"[%dB] W: 0x%"PRIx64
+
+# cxl_socket_transport.c
+cxl_socket_cxl_io_mmio_write(uint64_t address, int size, uint64_t value) "MMIO WR @0x%"PRIx64"[%dB]: 0x%"PRIx64
+cxl_socket_cxl_io_mmio_read(uint64_t address, int size) "MMIO RD @0x%"PRIx64"[%dB]"
+cxl_socket_cxl_io_config_space_write(uint8_t bus, uint8_t device, uint8_t function, uint32_t offset, int size, uint32_t val) "[%02x:%02x.%d] CFG WR @0x%03X[%dB]: 0x%X"
+cxl_socket_cxl_io_config_space_read(uint8_t bus, uint8_t device, uint8_t function, uint32_t offset, int size) "[%02x:%02x.%d] CFG RD @0x%03X[%dB]"
+cxl_socket_cxl_io_cpl(void) "CPL"
+cxl_socket_cxl_io_cpld(uint64_t data) "CPLD: DATA: 0x%"PRIx64
+cxl_socket_debug_msg(const char *dev) "%s"
+cxl_socket_debug_num(const char *dev, uint32_t size) "%s: %u"

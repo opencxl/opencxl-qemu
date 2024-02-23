@@ -1,9 +1,16 @@
 # See docs/devel/tracing.rst for syntax documentation.
 
+# pcie_doe.c
+pcie_doe_request(uint16_t vendor_id, uint8_t protocol) "DOE Request: Vendor ID= 0x%04x, Protocol= 0x%02x"
+pcie_doe_request_discovery(uint8_t index) "DOE Request Discovery: Index= 0x%02x"
+
 # pci.c
 pci_update_mappings_del(const char *dev, uint32_t bus, uint32_t slot, uint32_t func, int bar, uint64_t addr, uint64_t size) "%s %02x:%02x.%x %d,0x%"PRIx64"+0x%"PRIx64
 pci_update_mappings_add(const char *dev, uint32_t bus, uint32_t slot, uint32_t func, int bar, uint64_t addr, uint64_t size) "%s %02x:%02x.%x %d,0x%"PRIx64"+0x%"PRIx64
 pci_route_irq(int dev_irq, const char *dev_path, int parent_irq, const char *parent_path) "IRQ %d @%s -> IRQ %d @%s"
+pci_debug_msg(const char *dev) "%s"
+pci_bus_extended(const char *name) "Bus %s allows extended config space"
+pci_bus_not_extended(const char *name) "Bus %s does not allow extended config space"
 
 # pci_host.c
 pci_cfg_read(const char *dev, uint32_t bus, uint32_t slot, uint32_t func, unsigned offs, unsigned val) "%s %02x:%02x.%x @0x%x -> 0x%x"

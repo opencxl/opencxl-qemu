@@ -43,6 +43,7 @@
 #include "hw/qdev-properties.h"
 #include "hw/clock.h"
 #include "hw/boards.h"
+#include "trace.h"
 
 /*
  * Aliases were a bad idea from the start.  Let's keep them
@@ -628,6 +629,7 @@ DeviceState *qdev_device_add_from_qdict(const QDict *opts,
     }
 
     /* find driver */
+    trace_qdev_device_add_driver(driver);
     dc = qdev_get_device_class(&driver, errp);
     if (!dc) {
         return NULL;

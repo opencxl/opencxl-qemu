@@ -3610,9 +3610,14 @@ void qemu_init(int argc, char **argv)
 
     if (!preconfig_requested) {
         qmp_x_exit_preconfig(&error_fatal);
+        trace_vl_debug_message("Completed qmp_x_exit_preconfig");
     }
     qemu_init_displays();
     accel_setup_post(current_machine);
+
     os_setup_post();
+    trace_vl_debug_message("Completed os_setup_post");
+
     resume_mux_open();
+    trace_vl_debug_message("Completed qemu_init");
 }

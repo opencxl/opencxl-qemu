@@ -10,27 +10,18 @@
 
 #include "qemu/osdep.h"
 #include "qemu/log.h"
+#include "qapi/error.h"
+
+#include "hw/cxl/cxl.h"
 #include "hw/pci/msi.h"
 #include "hw/pci/pcie.h"
 #include "hw/pci/pcie_port.h"
-#include "qapi/error.h"
-
-typedef struct CXLDownstreamPort {
-    /*< private >*/
-    PCIESlot parent_obj;
-
-    /*< public >*/
-    CXLComponentState cxl_cstate;
-} CXLDownstreamPort;
-
-#define TYPE_CXL_DSP "cxl-downstream"
-DECLARE_INSTANCE_CHECKER(CXLDownstreamPort, CXL_DSP, TYPE_CXL_DSP)
 
 #define CXL_DOWNSTREAM_PORT_MSI_OFFSET 0x70
 #define CXL_DOWNSTREAM_PORT_MSI_NR_VECTOR 1
 #define CXL_DOWNSTREAM_PORT_EXP_OFFSET 0x90
 #define CXL_DOWNSTREAM_PORT_AER_OFFSET 0x100
-#define CXL_DOWNSTREAM_PORT_DVSEC_OFFSET        \
+#define CXL_DOWNSTREAM_PORT_DVSEC_OFFSET \
     (CXL_DOWNSTREAM_PORT_AER_OFFSET + PCI_ERR_SIZEOF)
 
 static void latch_registers(CXLDownstreamPort *dsp)
@@ -44,7 +35,7 @@ static void latch_registers(CXLDownstreamPort *dsp)
 
 /* TODO: Look at sharing this code acorss all CXL port types */
 static void cxl_dsp_dvsec_write_config(PCIDevice *dev, uint32_t addr,
-                                      uint32_t val, int len)
+                                       uint32_t val, int len)
 {
     CXLDownstreamPort *dsp = CXL_DSP(dev);
     CXLComponentState *cxl_cstate = &dsp->cxl_cstate;
@@ -61,14 +52,13 @@ static void cxl_dsp_dvsec_write_config(PCIDevice *dev, uint32_t addr,
                 /* Alt Memory & ID Space Enable */
                 qemu_log_mask(LOG_UNIMP,
                               "Alt Memory & ID space is not supported\n");
-
             }
         }
     }
 }
 
-static void cxl_dsp_config_write(PCIDevice *d, uint32_t address,
-                                 uint32_t val, int len)
+static void cxl_dsp_config_write(PCIDevice *d, uint32_t address, uint32_t val,
+                                 int len)
 {
     uint16_t slt_ctl, slt_sta;
 
@@ -98,40 +88,36 @@ static void build_dvsecs(CXLComponentState *cxl)
 {
     uint8_t *dvsec;
 
-    dvsec = (uint8_t *)&(CXLDVSECPortExtensions){ 0 };
-    cxl_component_create_dvsec(cxl, CXL2_DOWNSTREAM_PORT,
-                               EXTENSIONS_PORT_DVSEC_LENGTH,
-                               EXTENSIONS_PORT_DVSEC,
-                               EXTENSIONS_PORT_DVSEC_REVID, dvsec);
+    dvsec = (uint8_t *)&(CXLDVSECPortExtensions) { 0 };
+    cxl_component_create_dvsec(
+        cxl, CXL2_DOWNSTREAM_PORT, EXTENSIONS_PORT_DVSEC_LENGTH,
+        EXTENSIONS_PORT_DVSEC, EXTENSIONS_PORT_DVSEC_REVID, dvsec);
 
-    dvsec = (uint8_t *)&(CXLDVSECPortFlexBus){
-        .cap                     = 0x27, /* Cache, IO, Mem, non-MLD */
-        .ctrl                    = 0x02, /* IO always enabled */
-        .status                  = 0x26, /* same */
+    dvsec = (uint8_t *)&(CXLDVSECPortFlexBus) {
+        .cap = 0x27, /* Cache, IO, Mem, non-MLD */
+        .ctrl = 0x02, /* IO always enabled */
+        .status = 0x26, /* same */
         .rcvd_mod_ts_data_phase1 = 0xef, /* WTF? */
     };
-    cxl_component_create_dvsec(cxl, CXL2_DOWNSTREAM_PORT,
-                               PCIE_FLEXBUS_PORT_DVSEC_LENGTH_2_0,
-                               PCIE_FLEXBUS_PORT_DVSEC,
-                               PCIE_FLEXBUS_PORT_DVSEC_REVID_2_0, dvsec);
+    cxl_component_create_dvsec(
+        cxl, CXL2_DOWNSTREAM_PORT, PCIE_FLEXBUS_PORT_DVSEC_LENGTH_2_0,
+        PCIE_FLEXBUS_PORT_DVSEC, PCIE_FLEXBUS_PORT_DVSEC_REVID_2_0, dvsec);
 
-    dvsec = (uint8_t *)&(CXLDVSECPortGPF){
-        .rsvd        = 0,
+    dvsec = (uint8_t *)&(CXLDVSECPortGPF) {
+        .rsvd = 0,
         .phase1_ctrl = 1, /* 1μs timeout */
         .phase2_ctrl = 1, /* 1μs timeout */
     };
-    cxl_component_create_dvsec(cxl, CXL2_DOWNSTREAM_PORT,
-                               GPF_PORT_DVSEC_LENGTH, GPF_PORT_DVSEC,
-                               GPF_PORT_DVSEC_REVID, dvsec);
+    cxl_component_create_dvsec(cxl, CXL2_DOWNSTREAM_PORT, GPF_PORT_DVSEC_LENGTH,
+                               GPF_PORT_DVSEC, GPF_PORT_DVSEC_REVID, dvsec);
 
-    dvsec = (uint8_t *)&(CXLDVSECRegisterLocator){
-        .rsvd         = 0,
+    dvsec = (uint8_t *)&(CXLDVSECRegisterLocator) {
+        .rsvd = 0,
         .reg0_base_lo = RBI_COMPONENT_REG | CXL_COMPONENT_REG_BAR_IDX,
         .reg0_base_hi = 0,
     };
-    cxl_component_create_dvsec(cxl, CXL2_DOWNSTREAM_PORT,
-                               REG_LOC_DVSEC_LENGTH, REG_LOC_DVSEC,
-                               REG_LOC_DVSEC_REVID, dvsec);
+    cxl_component_create_dvsec(cxl, CXL2_DOWNSTREAM_PORT, REG_LOC_DVSEC_LENGTH,
+                               REG_LOC_DVSEC, REG_LOC_DVSEC_REVID, dvsec);
 }
 
 static void cxl_dsp_realize(PCIDevice *d, Error **errp)
@@ -148,16 +134,14 @@ static void cxl_dsp_realize(PCIDevice *d, Error **errp)
     pcie_port_init_reg(d);
 
     rc = msi_init(d, CXL_DOWNSTREAM_PORT_MSI_OFFSET,
-                  CXL_DOWNSTREAM_PORT_MSI_NR_VECTOR,
-                  true, true, errp);
+                  CXL_DOWNSTREAM_PORT_MSI_NR_VECTOR, true, true, errp);
     if (rc) {
         assert(rc == -ENOTSUP);
         goto err_bridge;
     }
 
     rc = pcie_cap_init(d, CXL_DOWNSTREAM_PORT_EXP_OFFSET,
-                       PCI_EXP_TYPE_DOWNSTREAM, p->port,
-                       errp);
+                       PCI_EXP_TYPE_DOWNSTREAM, p->port, errp);
     if (rc < 0) {
         goto err_msi;
     }
@@ -191,13 +175,13 @@ static void cxl_dsp_realize(PCIDevice *d, Error **errp)
 
     return;
 
- err_chassis:
+err_chassis:
     pcie_chassis_del_slot(s);
- err_pcie_cap:
+err_pcie_cap:
     pcie_cap_exit(d);
- err_msi:
+err_msi:
     msi_uninit(d);
- err_bridge:
+err_bridge:
     pci_bridge_exitfn(d);
 }
 

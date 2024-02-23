@@ -1,0 +1,11 @@
+cat /proc/iomem
+
+# memory write
+busybox devmem 0x290000000 32 0xFFFFFFFF
+
+busybox devmem 0xfe801000 32
+
+# Remove KMEM and load devdax driver
+
+daxctl reconfigure-device --human --mode=devdax --force dax0.0
+daxctl enable-device dax0.0

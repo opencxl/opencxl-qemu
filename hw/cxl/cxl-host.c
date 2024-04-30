@@ -49,16 +49,16 @@ static void cxl_fixed_memory_window_config(CXLState *cxl_state,
     }
 
     if (object->size % (256 * MiB)) {
-        error_setg(errp,
-                   "Size of a CXL fixed memory window must be a multiple of 256MiB");
+        error_setg(
+            errp,
+            "Size of a CXL fixed memory window must be a multiple of 256MiB");
         return;
     }
     fw->size = object->size;
 
     if (object->has_interleave_granularity) {
-        fw->enc_int_gran =
-            cxl_interleave_granularity_enc(object->interleave_granularity,
-                                           errp);
+        fw->enc_int_gran = cxl_interleave_granularity_enc(
+            object->interleave_granularity, errp);
         if (*errp) {
             return;
         }
@@ -67,8 +67,8 @@ static void cxl_fixed_memory_window_config(CXLState *cxl_state,
         fw->enc_int_gran = 0;
     }
 
-    cxl_state->fixed_windows = g_list_append(cxl_state->fixed_windows,
-                                             g_steal_pointer(&fw));
+    cxl_state->fixed_windows =
+        g_list_append(cxl_state->fixed_windows, g_steal_pointer(&fw));
 
     return;
 }
@@ -87,8 +87,7 @@ void cxl_fmws_link_targets(CXLState *cxl_state, Error **errp)
                 bool ambig;
 
                 o = object_resolve_path_type(fw->targets[i],
-                                             TYPE_PXB_CXL_DEVICE,
-                                             &ambig);
+                                             TYPE_PXB_CXL_DEVICE, &ambig);
                 if (!o) {
                     error_setg(errp, "Could not resolve CXLFM target %s",
                                fw->targets[i]);
@@ -210,36 +209,34 @@ static MemTxResult cxl_read_cfmws(void *opaque, hwaddr addr, uint64_t *data,
 
     d = cxl_cfmws_find_device(fw, addr);
     if (d == NULL) {
+        trace_cxl_debug_message("CXL device not found");
         *data = 0;
         /* Reads to invalid address return poison */
         return result;
     }
-    type = object_get_typename(OBJECT(d));
 
-    g_assert(addr < 0x8000000);
-
-    if (g_strcmp0(type, "cxl-type1") == 0)
-        result = cxl_type1_read(d, addr + fw->base, data, size, attrs);
-    else if (g_strcmp0(type, "cxl-type2") == 0)
-        result =
-            cxl_host_type2_hcoh_read(d, addr + fw->base, data, size, attrs);
-    else if (g_strcmp0(type, "cxl-type3") == 0) {
-        if (cxl_is_remote_root_port(d)) {
-            result =
-                cxl_remote_cxl_mem_read(d, addr + fw->base, data, size, attrs);
-            trace_cxl_read_cfmws("CXL.mem via RP", addr, size, *data);
-        } else {
+    if (cxl_is_remote_root_port(d)) {
+        result = cxl_remote_cxl_mem_read(d, addr + fw->base, data, size, attrs);
+        trace_cxl_read_cfmws("CXL.mem via RP", addr, size, *data);
+    } else {
+        type = object_get_typename(OBJECT(d));
+        if (g_strcmp0(type, "cxl-type1") == 0)
+            result = cxl_type1_read(d, addr + fw->base, data, size, attrs);
+        else if (g_strcmp0(type, "cxl-type2") == 0)
+            result = cxl_host_type2_hcoh_read(d, addr + fw->base, data, size, attrs);
+        else if (g_strcmp0(type, "cxl-type3") == 0) {
             result = cxl_type3_read(d, addr + fw->base, data, size, attrs);
             trace_cxl_read_cfmws("CXL.mem", addr, size, *data);
+        } else {
+            trace_cxl_debug_message("Unexpected CXL device type");
         }
     }
 
     return result;
 }
 
-static MemTxResult cxl_write_cfmws(void *opaque, hwaddr addr,
-                                   uint64_t data, unsigned size,
-                                   MemTxAttrs attrs)
+static MemTxResult cxl_write_cfmws(void *opaque, hwaddr addr, uint64_t data,
+                                   unsigned size, MemTxAttrs attrs)
 {
     MemTxResult result = MEMTX_OK;
     CXLFixedWindow *fw = opaque;
@@ -248,26 +245,25 @@ static MemTxResult cxl_write_cfmws(void *opaque, hwaddr addr,
 
     d = cxl_cfmws_find_device(fw, addr);
     if (d == NULL) {
+        trace_cxl_debug_message("CXL device not found");
         /* Writes to invalid address are silent */
         return result;
     }
-    type = object_get_typename(OBJECT(d));
 
-    g_assert(addr < 0x8000000);
-
-    if (g_strcmp0(type, "cxl-type1") == 0)
-        result = cxl_type1_write(d, addr + fw->base, &data, size, attrs);
-    else if (g_strcmp0(type, "cxl-type2") == 0)
-        result =
-            cxl_host_type2_hcoh_write(d, addr + fw->base, data, size, attrs);
-    else if (g_strcmp0(type, "cxl-type3") == 0) {
-        if (cxl_is_remote_root_port(d)) {
-            trace_cxl_write_cfmws("CXL.mem via RP", addr, size, data);
-            result =
-                cxl_remote_cxl_mem_write(d, addr + fw->base, data, size, attrs);
-        } else {
+    if (cxl_is_remote_root_port(d)) {
+        trace_cxl_write_cfmws("CXL.mem via RP", addr, size, data);
+        result = cxl_remote_cxl_mem_write(d, addr + fw->base, data, size, attrs);
+    } else {
+        type = object_get_typename(OBJECT(d));
+        if (g_strcmp0(type, "cxl-type1") == 0)
+            result = cxl_type1_write(d, addr + fw->base, &data, size, attrs);
+        else if (g_strcmp0(type, "cxl-type2") == 0)
+            result = cxl_host_type2_hcoh_write(d, addr + fw->base, data, size, attrs);
+        else if (g_strcmp0(type, "cxl-type3") == 0) {
             trace_cxl_write_cfmws("CXL.mem", addr, size, data);
             result = cxl_type3_write(d, addr + fw->base, data, size, attrs);
+        } else {
+            trace_cxl_debug_message("Unexpected CXL device type");
         }
     }
     return result;
@@ -277,16 +273,18 @@ const MemoryRegionOps cfmws_ops = {
     .read_with_attrs = cxl_read_cfmws,
     .write_with_attrs = cxl_write_cfmws,
     .endianness = DEVICE_LITTLE_ENDIAN,
-    .valid = {
-        .min_access_size = 1,
-        .max_access_size = 8,
-        .unaligned = true,
-    },
-    .impl = {
-        .min_access_size = 1,
-        .max_access_size = 8,
-        .unaligned = true,
-    },
+    .valid =
+        {
+            .min_access_size = 1,
+            .max_access_size = 8,
+            .unaligned = true,
+        },
+    .impl =
+        {
+            .min_access_size = 1,
+            .max_access_size = 8,
+            .unaligned = true,
+        },
 };
 
 static void machine_get_cxl(Object *obj, Visitor *v, const char *name,
@@ -338,15 +336,14 @@ static void machine_set_cfmw(Object *obj, Visitor *v, const char *name,
 
 void cxl_machine_init(Object *obj, CXLState *state)
 {
-    object_property_add(obj, "cxl", "bool", machine_get_cxl,
-                        machine_set_cxl, NULL, state);
+    object_property_add(obj, "cxl", "bool", machine_get_cxl, machine_set_cxl,
+                        NULL, state);
     object_property_set_description(obj, "cxl",
                                     "Set on/off to enable/disable "
                                     "CXL instantiation");
 
     object_property_add(obj, "cxl-fmw", "CXLFixedMemoryWindow",
-                        machine_get_cfmw, machine_set_cfmw,
-                        NULL, state);
+                        machine_get_cfmw, machine_set_cfmw, NULL, state);
     object_property_set_description(obj, "cxl-fmw",
                                     "CXL Fixed Memory Windows (array)");
 }
@@ -355,7 +352,8 @@ void cxl_hook_up_pxb_registers(PCIBus *bus, CXLState *state, Error **errp)
 {
     /* Walk the pci busses looking for pxb busses to hook up */
     if (bus) {
-        QLIST_FOREACH(bus, &bus->child, sibling) {
+        QLIST_FOREACH(bus, &bus->child, sibling)
+        {
             if (!pci_bus_is_root(bus)) {
                 continue;
             }

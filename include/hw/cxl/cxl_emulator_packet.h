@@ -99,10 +99,11 @@ typedef struct {
 typedef struct {
     uint16_t req_id;
     uint8_t tag;
-    uint8_t last_dw_be  : 4;
     uint8_t first_dw_be : 4;
-    uint64_t addr       : 62; // Adjusted for 62 bits
-    uint8_t rsvd        : 2;
+    uint8_t last_dw_be  : 4;
+    uint64_t addr_upper : 56; // Adjusted for 62 bits, loops around the dword
+    uint8_t rsvd        : 2; 
+    uint64_t addr_lower : 6;
 } __attribute__((packed)) cxl_io_mreq_header_t;
 
 typedef struct {
@@ -121,12 +122,13 @@ typedef struct {
 typedef struct {
     uint16_t req_id;
     uint8_t tag;
-    uint8_t last_dw_be  : 4;
     uint8_t first_dw_be : 4;
+    uint8_t last_dw_be  : 4; // endianness compatibility -- swap order
     uint16_t dest_id;
+    uint8_t ext_reg_num : 4;
     uint8_t rsvd     : 4;
-    uint16_t reg_num : 10;
     uint8_t r        : 2;
+    uint16_t reg_num : 6;
 } __attribute__((packed)) cxl_io_cfg_req_header_t;
 
 typedef struct {
@@ -144,15 +146,14 @@ typedef struct {
 
 typedef struct {
     uint16_t cpl_id;
-    uint8_t ep          : 1;
-    uint8_t load_addr_6 : 1;
-    uint8_t status      : 1; // Assuming one bit as per the Python class
+    uint8_t byte_count_upper : 4;
     uint8_t bcm         : 1;
-    uint32_t byte_count : 12;
+    uint8_t status      : 1; // Assuming one bit as per the Python class
+    uint8_t byte_count_lower : 8;
     uint16_t req_id;
     uint8_t tag;
-    uint8_t rsvd       : 1;
-    uint8_t lower_addr : 7;
+    uint8_t lower_addr  : 7;
+    uint8_t rsvd        : 1;
 } __attribute__((packed)) cxl_io_completion_header_t;
 
 typedef struct {

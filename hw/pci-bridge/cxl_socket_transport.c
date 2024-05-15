@@ -1,6 +1,7 @@
 #include "qemu/osdep.h"
 #include "qemu/log.h"
 #include "qemu/range.h"
+#include "qemu/bitops.h"
 #include "hw/cxl/cxl_socket_transport.h"
 #include "trace.h"
 

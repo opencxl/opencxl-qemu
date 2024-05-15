@@ -1,6 +1,7 @@
 #include "qemu/osdep.h"
 #include "qemu/log.h"
 #include "qemu/range.h"
+#include "qemu/bitops.h"
 #include "hw/cxl/cxl_socket_transport.h"
 #include "trace.h"
 
@@ -19,6 +20,13 @@
 #define MAX_TAG          512
 #define MAX_PAYLOAD_SIZE 512
 #define MAX_DURATION     5
+
+// For mreq_header_t endianness compatibility
+#define EXTRACT_UPPER_56(address) (extract64(address, 2, 56))
+#define EXTRACT_LOWER_6(address) (extract64(address, 58, 6))
+
+// For cfg_req_header_t endianness compatibility
+#define EXTRACT_EXTENSION_4(reg) (extract16(reg, 6, 4))
 
 typedef struct packet_table_entry {
     uint8_t packet[MAX_PAYLOAD_SIZE];
@@ -292,7 +300,8 @@ bool send_cxl_io_mem_read(int socket_fd, hwaddr hpa, int size, uint16_t *tag)
 
     packet.mreq_header.req_id = 0;
     packet.mreq_header.tag = *tag;
-    packet.mreq_header.addr = hpa;
+    packet.mreq_header.addr_upper = EXTRACT_UPPER_56(hpa); // endianness compatibility
+    packet.mreq_header.addr_lower = EXTRACT_LOWER_6(hpa); // ditto
 
     trace_cxl_socket_debug_num("MRD_64B Packet Size", sizeof(packet));
 
@@ -324,7 +333,8 @@ bool send_cxl_io_mem_write(int socket_fd, hwaddr hpa, uint64_t val, int size,
 
     packet.mreq_header.req_id = 0;
     packet.mreq_header.tag = *tag;
-    packet.mreq_header.addr = hpa;
+    packet.mreq_header.addr_upper = EXTRACT_UPPER_56(hpa);
+    packet.mreq_header.addr_lower = EXTRACT_LOWER_6(hpa);
 
     packet.data = val;
 
@@ -362,7 +372,9 @@ static bool fill_cxl_io_cfg_req_packet(cxl_io_cfg_req_header_t *header,
     header->first_dw_be = first_dw_be;
     header->last_dw_be = 0;
     header->dest_id = id;
-    header->reg_num = (cfg_addr >> 2) & 0x3FF;
+    uint16_t reg_num = (cfg_addr >> 2) & 0x3FF;
+    header->ext_reg_num = EXTRACT_EXTENSION_4(reg_num);
+    header->reg_num = EXTRACT_LOWER_6(reg_num);
     return true;
 }
 

@@ -21,11 +21,11 @@
 #define MAX_DURATION     5
 
 // For mreq_header_t endianness compatibility
-#define EXTRACT_UPPER_56(address) ((address >> 6))
-#define EXTRACT_LOWER_6(address) ((address & 0x3F))
+#define EXTRACT_UPPER_56(address) (extract64(address, 2, 56))
+#define EXTRACT_LOWER_6(address) (extract64(address, 58, 6))
 
 // For cfg_req_header_t endianness compatibility
-#define EXTRACT_EXTENSION_4(reg) ((reg >> 6))
+#define EXTRACT_EXTENSION_4(reg) (extract16(reg, 6, 4))
 
 typedef struct packet_table_entry {
     uint8_t packet[MAX_PAYLOAD_SIZE];
@@ -372,7 +372,7 @@ static bool fill_cxl_io_cfg_req_packet(cxl_io_cfg_req_header_t *header,
     header->last_dw_be = 0;
     header->dest_id = id;
     uint16_t reg_num = (cfg_addr >> 2) & 0x3FF;
-    header->ext_reg_num = EXTRACT_EXTENSION_4(reg_num); // endianness, blah blah
+    header->ext_reg_num = EXTRACT_EXTENSION_4(reg_num);
     header->reg_num = EXTRACT_LOWER_6(reg_num);
     return true;
 }

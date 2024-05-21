@@ -4,6 +4,7 @@
 #include "qemu/bitops.h"
 #include "hw/cxl/cxl_socket_transport.h"
 #include "hw/cxl/cxl_endian.h"
+#include "hw/cxl/cxl_logging.h"
 #include "trace.h"
 
 #include <arpa/inet.h>
@@ -41,6 +42,15 @@ typedef struct packet_table_entry {
 
 packet_table_entry_t packet_entries[512] = { 0 };
 
+/* FUNCTION PROTOTYPES */
+
+/**
+ * @brief Given the payload of a CXL.io packet -- that is,
+ * minus the mandatory system header -- determines the
+ * `fmt_type` of the io packet.
+ */
+static inline cxl_io_fmt_type_t get_io_fmt(uint8_t *raw_pckt_pld_buf);
+
 static bool wait_for_payload(int socket_fd, uint8_t *buffer, size_t buffer_size,
                              size_t payload_size);
 static bool wait_for_system_header(int socket_fd, uint8_t *buffer,
@@ -49,12 +59,9 @@ static uint16_t get_next_tag(void);
 static bool process_incoming_packets(int socket_fd);
 static packet_table_entry_t *get_packet_entry(uint16_t tag);
 
-/**
- * @brief Given the payload of a CXL.io packet -- that is,
- * minus the mandatory system header -- determines the
- * `fmt_type` of the io packet.
- */
-inline cxl_io_fmt_type_t get_io_fmt(uint8_t *raw_pckt_pld_buf) {
+/* DEFINITIONS */
+
+static inline cxl_io_fmt_type_t get_io_fmt(uint8_t *raw_pckt_pld_buf) {
     return ((cxl_io_header_t *) raw_pckt_pld_buf)->fmt_type;
 }
 
@@ -132,6 +139,11 @@ bool process_incoming_packets(int socket_fd)
     const size_t buffer_offset = system_header_size;
     buffer_size = buffer_size - buffer_offset;
 
+    char syshbuf[500];
+    snprintf(syshbuf, 500, "SYSTEM PACKET TYPE: %x SYSTEM PACKET SIZE: %x\n", 
+        system_header->payload_type, system_header->payload_length);
+    write_to_log_file(syshbuf);
+
     trace_cxl_socket_debug_num("- system_header_size", system_header_size);
     trace_cxl_socket_debug_num("- remaining_payload_size",
                                remaining_payload_size);
@@ -144,7 +156,12 @@ bool process_incoming_packets(int socket_fd)
     }
 
     uint8_t *main_payload = buffer + buffer_offset; // ignore system header
-    endian_swap_payload_io(main_payload, get_io_fmt(main_payload));
+    if (system_header->payload_type == CXL_IO)
+        endian_swap_payload_io(main_payload, get_io_fmt(main_payload));
+
+    char ppbuf[500];
+    snpprint_io_packet(ppbuf, main_payload, get_io_fmt(main_payload), sizeof(ppbuf));
+    write_to_log_file(ppbuf);
 
     // now that we've endian-swapped the fields > 1 byte in width,
     // we are free to memcpy the contents into our array of packet entries.
@@ -303,6 +320,7 @@ static uint32_t round_up_to_nearest_dword(uint32_t number)
 bool send_cxl_io_mem_read(int socket_fd, hwaddr hpa, int size, uint16_t *tag)
 {
     trace_cxl_socket_debug_msg("[Sending Packet] START");
+    write_to_log_file("[Sending Packet] START");
 
     *tag = get_next_tag();
 
@@ -322,14 +340,20 @@ bool send_cxl_io_mem_read(int socket_fd, hwaddr hpa, int size, uint16_t *tag)
 
     packet.mreq_header.req_id = 0;
     packet.mreq_header.tag = *tag;
-    packet.mreq_header.addr_upper = EXTRACT_UPPER_56(hpa >> 2); // endianness compatibility
-    packet.mreq_header.addr_lower = EXTRACT_LOWER_6(hpa >> 2); // ditto
+    packet.mreq_header.addr_upper = EXTRACT_UPPER_56(hpa); // endianness compatibility
+    packet.mreq_header.addr_lower = EXTRACT_LOWER_6(hpa); // ditto
 
     trace_cxl_socket_debug_num("MRD_64B Packet Size", sizeof(packet));
+
+    perform_endian_swap((uint8_t *) &packet, sizeof(packet));
 
     bool successful = write(socket_fd, &packet, sizeof(packet)) != -1;
 
     trace_cxl_socket_debug_msg("[Sending Packet] END");
+    char pcktbuf[500];
+    snpprint_io_packet(pcktbuf, (uint8_t *) &packet + sizeof(system_header_packet_t), MEM_RD, 500);
+    write_to_log_file(pcktbuf);
+    write_to_log_file("[Sending Packet] END");
 
     return successful;
 }
@@ -338,6 +362,7 @@ bool send_cxl_io_mem_write(int socket_fd, hwaddr hpa, uint64_t val, int size,
                            uint16_t *tag)
 {
     trace_cxl_socket_debug_msg("[Sending Packet] START");
+    write_to_log_file("[Sending Packet] START");
 
     *tag = get_next_tag();
 
@@ -364,10 +389,14 @@ bool send_cxl_io_mem_write(int socket_fd, hwaddr hpa, uint64_t val, int size,
 
     trace_cxl_socket_debug_num("MRD_64B Packet Size", sizeof(packet));
 
+    perform_endian_swap((uint8_t *) &packet, sizeof(packet));
+
     bool successful = write(socket_fd, &packet, sizeof(packet)) != -1;
-
+    char pcktbuf[500];
+    snpprint_io_packet(pcktbuf, (uint8_t *) &packet + sizeof(system_header_packet_t), MEM_WR, 500);
+    write_to_log_file(pcktbuf);
     trace_cxl_socket_debug_msg("[Sending Packet] END");
-
+    write_to_log_file("[Sending Packet] END");
     return successful;
 }
 
@@ -406,7 +435,7 @@ bool send_cxl_io_config_space_read(int socket_fd, uint16_t bdf, uint32_t offset,
                                    int size, bool type0, uint16_t *tag)
 {
     trace_cxl_socket_debug_msg("[Sending Packet] START");
-
+    write_to_log_file("[Sending Packet] START");
     *tag = get_next_tag();
 
     const uint8_t bus = bdf >> 8;
@@ -430,10 +459,15 @@ bool send_cxl_io_config_space_read(int socket_fd, uint16_t bdf, uint32_t offset,
 
     trace_cxl_socket_debug_num("CFG RD Packet Size", sizeof(packet));
 
+    perform_endian_swap((uint8_t *) &packet, sizeof(packet));
+
     bool successful = write(socket_fd, &packet, sizeof(packet)) != -1;
 
+    char pcktbuf[500];
+    snpprint_io_packet(pcktbuf, (uint8_t *) &packet + sizeof(system_header_packet_t), CFG_RD0, 500);
+    write_to_log_file(pcktbuf);
     trace_cxl_socket_debug_msg("[Sending Packet] END");
-
+    write_to_log_file("[Sending Packet] END");
     return successful;
 }
 
@@ -442,7 +476,7 @@ bool send_cxl_io_config_space_write(int socket_fd, uint16_t bdf,
                                     bool type0, uint16_t *tag)
 {
     trace_cxl_socket_debug_msg("[Sending Packet] START");
-
+    write_to_log_file("[Sending Packet] START");
     *tag = get_next_tag();
 
     const uint8_t bus = bdf >> 8;
@@ -467,8 +501,13 @@ bool send_cxl_io_config_space_write(int socket_fd, uint16_t bdf,
 
     trace_cxl_socket_debug_num("CFG WR Packet Size", sizeof(packet));
 
+    perform_endian_swap((uint8_t *) &packet, sizeof(packet));
+    
     bool successful = write(socket_fd, &packet, sizeof(packet)) != -1;
-
+    char pcktbuf[500];
+    snpprint_io_packet(pcktbuf, (uint8_t *) &packet + sizeof(system_header_packet_t), CFG_WR0, 500);
+    write_to_log_file(pcktbuf);
+    write_to_log_file("[Sending Packet] END");
     trace_cxl_socket_debug_msg("[Sending Packet] END");
 
     return successful;

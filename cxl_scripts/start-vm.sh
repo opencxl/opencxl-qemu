@@ -10,7 +10,7 @@ echo "SOCKET_HOST IS $SOCKET_HOST"
 
 cd ../build && ./qemu-system-x86_64 \
 	-m 8G -smp 4 \
-	-machine type=q35,accel=kvm,cxl=on -nographic \
+	-machine type=q35,cxl=on -nographic \
 	-hda fedora_39.qcow2 \
 	-cdrom seed.qcow2 \
 	-D debug.log \

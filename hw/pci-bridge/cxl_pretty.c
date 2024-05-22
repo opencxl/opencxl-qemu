@@ -1,3 +1,15 @@
+/**
+ * @file cxl_pretty.c
+ * @brief Utility functions for pretty-printing CXL packets.
+ *
+ * @copyright 2024 EEUM, Inc.
+ *
+ * This work is licensed under the terms of the GNU GPL, version 2 or later.
+ * See the COPYING file in the top-level directory.
+ *
+ * @author Benedict Song
+ */
+
 #include "hw/cxl/cxl_pretty.h"
 
 void snpprintpacket(char *buf, void *pckt, size_t at_most)

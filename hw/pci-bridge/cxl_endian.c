@@ -1,8 +1,14 @@
-/*
- * Copyright (c) 2024 EEUM, Inc.
+/**
+ * @file cxl_endian.c
+ * @brief Various useful functions for network-to-host endian conversion and
+ * interconversion of packet formatting from switch-side to QEMU-side.
+ *
+ * @copyright 2024 EEUM, Inc.
  *
  * This work is licensed under the terms of the GNU GPL, version 2 or later.
  * See the COPYING file in the top-level directory.
+ *
+ * @author Benedict Song
  */
 
 #include "hw/cxl/cxl_endian.h"

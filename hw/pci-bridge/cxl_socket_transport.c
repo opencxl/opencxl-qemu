@@ -20,8 +20,6 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <stdlib.h>
-#include <pthread.h>
-#include <execinfo.h>
 
 #define MAX_TAG          512
 #define MAX_PAYLOAD_SIZE 512
@@ -39,20 +37,12 @@
 #define EXTRACT_EXTENSION_4(reg) (extract16(reg, 6, 4))
 #define EXTRACT_LOWER_REG_6(reg) (extract16(reg, 0, 6))
 
-#define OUTLOG "./qemu-host-log.txt"
-
 typedef struct packet_table_entry {
     uint8_t packet[MAX_PAYLOAD_SIZE];
     size_t packet_size;
 } packet_table_entry_t;
 
 packet_table_entry_t packet_entries[512] = { 0 };
-
-/* GLOBALS */
-static pthread_mutex_t gid_mtx = PTHREAD_MUTEX_INITIALIZER;
-static uint64_t gid = 1;
-static bool logf_opened = false;
-static FILE *ologf = NULL;
 
 /* FUNCTION PROTOTYPES */
 
@@ -71,79 +61,12 @@ static uint16_t get_next_tag(void);
 static bool process_incoming_packets(int socket_fd);
 static packet_table_entry_t *get_packet_entry(uint16_t tag);
 
-static uint64_t write_to_log(void *stkid, const char *istream);
-
 /* DEFINITIONS */
-
-static uint64_t write_to_log(void *stkid, const char *istream)
-{  
-    pthread_mutex_lock(&gid_mtx);
-    
-    uint64_t gid_copy = (uint64_t) stkid;
-    if (stkid == NULL)
-    {
-        gid_copy = ++gid;
-    }
-    
-    if (!logf_opened)
-    {
-        ologf = fopen(OUTLOG, "w+");
-        logf_opened = true;
-    }
-
-    if (ologf == NULL)
-    {
-        return 0;
-    }
-
-    fprintf(ologf, "[#%lu] %s\n", gid_copy, istream);
-    fflush(ologf); // force printing all log info at once
-
-    pthread_mutex_unlock(&gid_mtx);
-    return gid_copy;
-}
 
 static inline cxl_io_fmt_type_t get_io_fmt(uint8_t *raw_pckt_pld_buf) 
 {
     return ((cxl_io_header_t *) raw_pckt_pld_buf)->fmt_type;
 }
-
-/*
-static size_t get_sz_from_fmt(cxl_io_fmt_type_t fmt)
-{
-    switch (fmt) 
-    {
-        case MRD_32B:
-        case MRD_64B:
-        case MRD_LK_32B:
-        case MRD_LK_64B:
-        case MWR_32B:
-        case MWR_64B: 
-        {
-            return sizeof(cxl_io_mem_rd_packet_t);
-        }
-
-        case CFG_RD0:
-        case CFG_RD1:
-        case CFG_WR0:
-        case CFG_WR1:
-        {
-            return sizeof(cxl_io_mem_rd_packet_t);
-        }
-
-        case CPL:
-        case CPL_D:
-        {
-            return sizeof(cxl_io_completion_packet_t);
-        }
-
-        default:
-        {
-            return 0;
-        }
-    }
-}
-*/
 
 bool wait_for_payload(int socket_fd, uint8_t *buffer, size_t buffer_size,
                       size_t payload_size)
@@ -158,7 +81,6 @@ bool wait_for_payload(int socket_fd, uint8_t *buffer, size_t buffer_size,
 
         // Check if the time elapsed exceeds the maximum duration
         if (difftime(current_time, start_time) > MAX_DURATION) {
-            write_to_log(NULL, "TIMEOUT! \n");
             trace_cxl_socket_debug_msg("Timeout exceeded!");
             return false;
         }
@@ -167,13 +89,11 @@ bool wait_for_payload(int socket_fd, uint8_t *buffer, size_t buffer_size,
         ssize_t bytes_read =
             read(socket_fd, &buffer[total_bytes_read], remaining_size);
         if (bytes_read <= 0) {
-            write_to_log(NULL, "No bytes read! \n");
             trace_cxl_socket_debug_msg("Failed to read bytes from socket");
             return false;
         }
         trace_cxl_socket_debug_num("Bytes read", bytes_read);
         if (bytes_read > 0 && bytes_read + total_bytes_read > buffer_size) {
-            write_to_log(NULL, "Buffer overflow! \n");
             trace_cxl_socket_debug_msg("Buffer overflowed");
             return false;
         }
@@ -207,10 +127,8 @@ bool process_incoming_packets(int socket_fd)
 {
     uint8_t buffer[MAX_PAYLOAD_SIZE];
     size_t buffer_size = sizeof(buffer);
-    uint64_t stkid = write_to_log(NULL, "Starting packet processing \n");
 
     if (!wait_for_system_header(socket_fd, buffer, buffer_size)) {
-        write_to_log((void *) stkid, "Failed to get system header! \n");
         trace_cxl_socket_debug_msg("Failed to get system header");
         return false;
     }
@@ -231,7 +149,6 @@ bool process_incoming_packets(int socket_fd)
     trace_cxl_socket_debug_num("- buffer_size", buffer_size);
     if (!wait_for_payload(socket_fd, &buffer[buffer_offset], buffer_size,
                           remaining_payload_size)) {
-        write_to_log((void *) stkid, "Failed to get packet payload! \n");
         trace_cxl_socket_debug_msg("Failed to get packet payload");
         return false;
     }
@@ -240,11 +157,6 @@ bool process_incoming_packets(int socket_fd)
     uint8_t *main_payload = buffer + buffer_offset; // ignore system header
     if (system_header->payload_type == CXL_IO)
         correct_payload_io(main_payload, get_io_fmt(main_payload));
-
-    char obuf[300];
-    write_to_log((void *) stkid, "After endian swap: ");
-    snpprintpacket(obuf, (void *) buffer, 300);
-    write_to_log((void *) stkid, obuf);
 
     // now that we've endian-swapped the fields > 1 byte in width,
     // we are free to memcpy the contents into our array of packet entries.
@@ -268,11 +180,9 @@ bool release_packet_entry(uint16_t tag)
 {
     if (tag >= MAX_TAG) {
         trace_cxl_socket_debug_num("Failed to release tag", tag);
-        write_to_log(NULL, "Failed to release tag!");
         return false;
     }
     trace_cxl_socket_debug_num("Releasing tag", tag);
-    write_to_log(NULL, "Released tag!");
     packet_entries[tag].packet_size = 0;
     return true;
 }
@@ -405,7 +315,6 @@ static uint32_t round_up_to_nearest_dword(uint32_t number)
 bool send_cxl_io_mem_read(int socket_fd, hwaddr hpa, int size, uint16_t *tag)
 {
     trace_cxl_socket_debug_msg("[Sending Packet] START");
-    uint64_t stkid = write_to_log(NULL, "[Sending Packet RD] START");
 
     *tag = get_next_tag();
 
@@ -437,7 +346,6 @@ bool send_cxl_io_mem_read(int socket_fd, hwaddr hpa, int size, uint16_t *tag)
     bool successful = write(socket_fd, &packet, sizeof(packet)) != -1;
 
     trace_cxl_socket_debug_msg("[Sending Packet] END");
-    write_to_log((void *) stkid, "[Sending Packet RD] END");
 
     return successful;
 }
@@ -446,7 +354,6 @@ bool send_cxl_io_mem_write(int socket_fd, hwaddr hpa, uint64_t val, int size,
                            uint16_t *tag)
 {
     trace_cxl_socket_debug_msg("[Sending Packet] START");
-    uint64_t stkid = write_to_log(NULL, "[Sending Packet MEM] START");
 
     *tag = get_next_tag();
 
@@ -479,7 +386,6 @@ bool send_cxl_io_mem_write(int socket_fd, hwaddr hpa, uint64_t val, int size,
     bool successful = write(socket_fd, &packet, sizeof(packet)) != -1;
 
     trace_cxl_socket_debug_msg("[Sending Packet] END");
-    write_to_log((void *) stkid, "[Sending Packet MEM] END");
 
     return successful;
 }
@@ -518,7 +424,6 @@ bool send_cxl_io_config_space_read(int socket_fd, uint16_t bdf, uint32_t offset,
                                    int size, bool type0, uint16_t *tag)
 {
     trace_cxl_socket_debug_msg("[Sending Packet] START");
-    uint64_t stkid = write_to_log(NULL, "[Sending Packet CFG] START");
 
     *tag = get_next_tag();
 
@@ -546,7 +451,6 @@ bool send_cxl_io_config_space_read(int socket_fd, uint16_t bdf, uint32_t offset,
     bool successful = write(socket_fd, &packet, sizeof(packet)) != -1;
 
     trace_cxl_socket_debug_msg("[Sending Packet] END");
-    write_to_log((void *) stkid, "[Sending Packet CFG] END");
 
     return successful;
 }
@@ -556,7 +460,6 @@ bool send_cxl_io_config_space_write(int socket_fd, uint16_t bdf,
                                     bool type0, uint16_t *tag)
 {
     trace_cxl_socket_debug_msg("[Sending Packet] START");
-    uint64_t stkid = write_to_log(NULL, "[Sending Packet CFG WR] START");
 
     *tag = get_next_tag();
 
@@ -585,7 +488,6 @@ bool send_cxl_io_config_space_write(int socket_fd, uint16_t bdf,
     bool successful = write(socket_fd, &packet, sizeof(packet)) != -1;
 
     trace_cxl_socket_debug_msg("[Sending Packet] END");
-    write_to_log((void *) stkid, "[Sending Packet CFG WR] END");
 
     return successful;
 }
@@ -594,7 +496,6 @@ cxl_io_completion_packet_t *wait_for_cxl_io_completion(int socket_fd,
                                                        uint16_t tag)
 {
     trace_cxl_socket_debug_msg("[Receiving Packet] START");
-    uint64_t stkid = write_to_log(NULL, "[Receiving Packet CPL] START");
 
     cxl_io_completion_packet_t *packet = NULL;
 
@@ -604,9 +505,6 @@ cxl_io_completion_packet_t *wait_for_cxl_io_completion(int socket_fd,
             assert(entry->packet_size == sizeof(cxl_io_completion_packet_t));
             trace_cxl_socket_cxl_io_cpl();
             packet = (cxl_io_completion_packet_t *)(entry->packet);
-            char obuf[300];
-            snpprintpacket(obuf, (void *) packet, 300);
-            write_to_log((void *) stkid, obuf);
             break;
         }
         if (!process_incoming_packets(socket_fd)) {
@@ -615,7 +513,6 @@ cxl_io_completion_packet_t *wait_for_cxl_io_completion(int socket_fd,
     }
 
     trace_cxl_socket_debug_msg("[Receiving Packet] END");
-    write_to_log((void *) stkid, "[Receiving Packet CPL] END");
 
     return packet;
 }
@@ -623,7 +520,6 @@ cxl_io_completion_packet_t *wait_for_cxl_io_completion(int socket_fd,
 cxl_io_completion_data_packet_t *wait_for_cxl_io_completion_data(int socket_fd,
                                                                  uint16_t tag)
 {
-    uint64_t stkid = write_to_log(NULL, "[Receiving Packet CPL_D] START");
     trace_cxl_socket_debug_msg("[Receiving Packet] START");
 
     cxl_io_completion_data_packet_t *packet = NULL;
@@ -639,9 +535,6 @@ cxl_io_completion_data_packet_t *wait_for_cxl_io_completion_data(int socket_fd,
                  ++dword_offset) {
                 trace_cxl_socket_cxl_io_cpld(packet->data);
             }
-            char obuf[300];
-            snpprintpacket(obuf, (void *) packet, 300);
-            write_to_log((void *) stkid, obuf);
             break;
         }
         if (!process_incoming_packets(socket_fd)) {
@@ -649,7 +542,6 @@ cxl_io_completion_data_packet_t *wait_for_cxl_io_completion_data(int socket_fd,
         }
     }
 
-    write_to_log((void *) stkid, "[Receiving Packet CPL_D] END");
     trace_cxl_socket_debug_msg("[Receiving Packet] END");
 
     return packet;
@@ -657,7 +549,6 @@ cxl_io_completion_data_packet_t *wait_for_cxl_io_completion_data(int socket_fd,
 
 void wait_for_cxl_io_cfg_completion(int socket_fd, uint16_t tag, uint32_t *data)
 {
-    uint64_t stkid = write_to_log(NULL, "[Receiving Packet CXL_IO] START");
     trace_cxl_socket_debug_msg("[Receiving Packet] START");
 
     while (true) {
@@ -677,16 +568,10 @@ void wait_for_cxl_io_cfg_completion(int socket_fd, uint16_t tag, uint32_t *data)
                 if (data != NULL) {
                     *data = 0xFFFFFFFF;
                 }
-                char obuf[300];
-                snpprintpacket(obuf, (void *) entry->packet, 300);
-                write_to_log((void *) stkid, obuf);
             } else {
                 cxl_io_completion_data_packet_t *packet =
                     (cxl_io_completion_data_packet_t *)(entry->packet);
                 *data = (uint32_t)(packet->data);
-                char obuf[300];
-                snpprintpacket(obuf, (void *) packet, 300);
-                write_to_log((void *) stkid, obuf);
             }
             trace_cxl_socket_cxl_io_cpl();
             break;
@@ -697,13 +582,7 @@ void wait_for_cxl_io_cfg_completion(int socket_fd, uint16_t tag, uint32_t *data)
     }
 
     trace_cxl_socket_debug_msg("[Receiving Packet] END");
-    /*
-    void *btptrs[1000];
-    size_t noptrs = backtrace(btptrs, 1000);
-    backtrace_symbols_fd(btptrs, noptrs, fileno(ologf)); 
-    */
 
-    write_to_log((void *) stkid, "[Receiving Packet CXL_IO] END");
 }
 
 int32_t create_socket_client(const char *host, uint32_t port)

@@ -1,8 +1,14 @@
-/*
- * Copyright (c) 2024 EEUM, Inc.
+/**
+ * @file cxl_endian.h
+ * @brief Various useful functions for network-to-host endian conversion and
+ * interconversion of packet formatting from switch-side to QEMU-side.
+ *
+ * @copyright 2024 EEUM, Inc.
  *
  * This work is licensed under the terms of the GNU GPL, version 2 or later.
  * See the COPYING file in the top-level directory.
+ *
+ * @author Benedict Song
  */
 
 #ifndef CXL_ENDIAN_H
@@ -27,6 +33,11 @@ uint64_t ntohll(uint64_t netllong);
  */
 uint64_t htonll(uint64_t hllong);
 
+/**
+ * @brief Corrects the structure of a cxl_io_header_t.
+ * 
+ * @param[out] correct_io_hdr The header on which to perform bytewise swap on fields.
+ */
 void correct_io_hdr(cxl_io_header_t *io_hdr);
 
 /**

@@ -49,9 +49,9 @@
 
 /*****************************************************************************/
 /* ICH9 DMI-to-PCI bridge */
-#define I82801ba_SSVID_OFFSET 0x50
-#define I82801ba_SSVID_SVID 0
-#define I82801ba_SSVID_SSID 0
+#define I82801ba_SSVID_OFFSET   0x50
+#define I82801ba_SSVID_SVID     0
+#define I82801ba_SSVID_SSID     0
 
 typedef struct I82801b11Bridge {
     /*< private >*/
@@ -65,8 +65,9 @@ static void i82801b11_bridge_realize(PCIDevice *d, Error **errp)
 
     pci_bridge_initfn(d, TYPE_PCI_BUS);
 
-    rc = pci_bridge_ssvid_init(d, I82801ba_SSVID_OFFSET, I82801ba_SSVID_SVID,
-                               I82801ba_SSVID_SSID, errp);
+    rc = pci_bridge_ssvid_init(d, I82801ba_SSVID_OFFSET,
+                               I82801ba_SSVID_SVID, I82801ba_SSVID_SSID,
+                               errp);
     if (rc < 0) {
         goto err_bridge;
     }
@@ -80,8 +81,10 @@ err_bridge:
 static const VMStateDescription i82801b11_bridge_dev_vmstate = {
     .name = "i82801b11_bridge",
     .priority = MIG_PRI_PCI_BUS,
-    .fields = (VMStateField[]) { VMSTATE_PCI_DEVICE(parent_obj, PCIBridge),
-                                 VMSTATE_END_OF_LIST() }
+    .fields = (VMStateField[]) {
+        VMSTATE_PCI_DEVICE(parent_obj, PCIBridge),
+        VMSTATE_END_OF_LIST()
+    }
 };
 
 static void i82801b11_bridge_class_init(ObjectClass *klass, void *data)
@@ -100,15 +103,14 @@ static void i82801b11_bridge_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo i82801b11_bridge_info = {
-    .name = "i82801b11-bridge",
-    .parent = TYPE_PCI_BRIDGE,
+    .name          = "i82801b11-bridge",
+    .parent        = TYPE_PCI_BRIDGE,
     .instance_size = sizeof(I82801b11Bridge),
-    .class_init = i82801b11_bridge_class_init,
-    .interfaces =
-        (InterfaceInfo[]) {
-            { INTERFACE_CONVENTIONAL_PCI_DEVICE },
-            {},
-        },
+    .class_init    = i82801b11_bridge_class_init,
+    .interfaces = (InterfaceInfo[]) {
+        { INTERFACE_CONVENTIONAL_PCI_DEVICE },
+        { },
+    },
 };
 
 static void d2pbr_register(void)

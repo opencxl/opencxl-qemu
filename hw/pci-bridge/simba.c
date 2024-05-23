@@ -53,9 +53,9 @@ static void simba_pci_bridge_realize(PCIDevice *dev, Error **errp)
     pci_bridge_initfn(dev, TYPE_PCI_BUS);
 
     pci_set_word(dev->config + PCI_COMMAND, PCI_COMMAND_MEMORY);
-    pci_set_word(dev->config + PCI_STATUS, PCI_STATUS_FAST_BACK |
-                                               PCI_STATUS_66MHZ |
-                                               PCI_STATUS_DEVSEL_MEDIUM);
+    pci_set_word(dev->config + PCI_STATUS,
+                 PCI_STATUS_FAST_BACK | PCI_STATUS_66MHZ |
+                 PCI_STATUS_DEVSEL_MEDIUM);
 
     /* Allow 32-bit IO addresses */
     pci_set_word(dev->config + PCI_IO_BASE, PCI_IO_RANGE_TYPE_32);
@@ -83,15 +83,14 @@ static void simba_pci_bridge_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo simba_pci_bridge_info = {
-    .name = TYPE_SIMBA_PCI_BRIDGE,
-    .parent = TYPE_PCI_BRIDGE,
-    .class_init = simba_pci_bridge_class_init,
+    .name          = TYPE_SIMBA_PCI_BRIDGE,
+    .parent        = TYPE_PCI_BRIDGE,
+    .class_init    = simba_pci_bridge_class_init,
     .instance_size = sizeof(SimbaPCIBridge),
-    .interfaces =
-        (InterfaceInfo[]) {
-            { INTERFACE_CONVENTIONAL_PCI_DEVICE },
-            {},
-        },
+    .interfaces = (InterfaceInfo[]) {
+        { INTERFACE_CONVENTIONAL_PCI_DEVICE },
+        { },
+    },
 };
 
 static void simba_register_types(void)

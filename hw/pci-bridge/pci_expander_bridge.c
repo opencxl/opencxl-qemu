@@ -31,13 +31,16 @@ enum BusType { PCI, PCIE, CXL };
 
 #define TYPE_PXB_BUS "pxb-bus"
 typedef struct PXBBus PXBBus;
-DECLARE_INSTANCE_CHECKER(PXBBus, PXB_BUS, TYPE_PXB_BUS)
+DECLARE_INSTANCE_CHECKER(PXBBus, PXB_BUS,
+                         TYPE_PXB_BUS)
 
 #define TYPE_PXB_PCIE_BUS "pxb-pcie-bus"
-DECLARE_INSTANCE_CHECKER(PXBBus, PXB_PCIE_BUS, TYPE_PXB_PCIE_BUS)
+DECLARE_INSTANCE_CHECKER(PXBBus, PXB_PCIE_BUS,
+                         TYPE_PXB_PCIE_BUS)
 
 #define TYPE_PXB_CXL_BUS "pxb-cxl-bus"
-DECLARE_INSTANCE_CHECKER(PXBBus, PXB_CXL_BUS, TYPE_PXB_CXL_BUS)
+DECLARE_INSTANCE_CHECKER(PXBBus, PXB_CXL_BUS,
+                         TYPE_PXB_CXL_BUS)
 
 struct PXBBus {
     /*< private >*/
@@ -48,10 +51,12 @@ struct PXBBus {
 };
 
 #define TYPE_PXB_DEVICE "pxb"
-DECLARE_INSTANCE_CHECKER(PXBDev, PXB_DEV, TYPE_PXB_DEVICE)
+DECLARE_INSTANCE_CHECKER(PXBDev, PXB_DEV,
+                         TYPE_PXB_DEVICE)
 
 #define TYPE_PXB_PCIE_DEVICE "pxb-pcie"
-DECLARE_INSTANCE_CHECKER(PXBDev, PXB_PCIE_DEV, TYPE_PXB_PCIE_DEVICE)
+DECLARE_INSTANCE_CHECKER(PXBDev, PXB_PCIE_DEV,
+                         TYPE_PXB_PCIE_DEVICE)
 
 static PXBDev *convert_to_pxb(PCIDevice *dev)
 {
@@ -60,8 +65,8 @@ static PXBDev *convert_to_pxb(PCIDevice *dev)
         return PXB_CXL_DEV(dev);
     }
 
-    return pci_bus_is_express(pci_get_bus(dev)) ? PXB_PCIE_DEV(dev)
-                                                : PXB_DEV(dev);
+    return pci_bus_is_express(pci_get_bus(dev))
+        ? PXB_PCIE_DEV(dev) : PXB_DEV(dev);
 }
 
 static GList *pxb_dev_list;
@@ -105,32 +110,33 @@ static void pxb_bus_class_init(ObjectClass *class, void *data)
 }
 
 static const TypeInfo pxb_bus_info = {
-    .name = TYPE_PXB_BUS,
-    .parent = TYPE_PCI_BUS,
+    .name          = TYPE_PXB_BUS,
+    .parent        = TYPE_PCI_BUS,
     .instance_size = sizeof(PXBBus),
-    .class_init = pxb_bus_class_init,
+    .class_init    = pxb_bus_class_init,
 };
 
 static const TypeInfo pxb_pcie_bus_info = {
-    .name = TYPE_PXB_PCIE_BUS,
-    .parent = TYPE_PCIE_BUS,
+    .name          = TYPE_PXB_PCIE_BUS,
+    .parent        = TYPE_PCIE_BUS,
     .instance_size = sizeof(PXBBus),
-    .class_init = pxb_bus_class_init,
+    .class_init    = pxb_bus_class_init,
 };
 
 static const TypeInfo pxb_cxl_bus_info = {
-    .name = TYPE_PXB_CXL_BUS,
-    .parent = TYPE_CXL_BUS,
+    .name          = TYPE_PXB_CXL_BUS,
+    .parent        = TYPE_CXL_BUS,
     .instance_size = sizeof(PXBBus),
-    .class_init = pxb_bus_class_init,
+    .class_init    = pxb_bus_class_init,
 };
 
 static const char *pxb_host_root_bus_path(PCIHostState *host_bridge,
                                           PCIBus *rootbus)
 {
-    PXBBus *bus = pci_bus_is_cxl(rootbus)       ? PXB_CXL_BUS(rootbus)
-                  : pci_bus_is_express(rootbus) ? PXB_PCIE_BUS(rootbus)
-                                                : PXB_BUS(rootbus);
+    PXBBus *bus = pci_bus_is_cxl(rootbus) ?
+                      PXB_CXL_BUS(rootbus) :
+                      pci_bus_is_express(rootbus) ? PXB_PCIE_BUS(rootbus) :
+                                                    PXB_BUS(rootbus);
 
     snprintf(bus->bus_path, 8, "0000:%02x", pxb_bus_num(rootbus));
     return bus->bus_path;
@@ -161,7 +167,8 @@ static char *pxb_host_ofw_unit_address(const SysBusDevice *dev)
                                main_host_sbd->mmio[0].addr, position + 1);
     }
     if (main_host_sbd->num_pio > 0) {
-        return g_strdup_printf("i%04x,%x", main_host_sbd->pio[0], position + 1);
+        return g_strdup_printf("i%04x,%x",
+                               main_host_sbd->pio[0], position + 1);
     }
     return NULL;
 }
@@ -180,9 +187,9 @@ static void pxb_host_class_init(ObjectClass *class, void *data)
 }
 
 static const TypeInfo pxb_host_info = {
-    .name = TYPE_PXB_HOST,
-    .parent = TYPE_PCI_HOST_BRIDGE,
-    .class_init = pxb_host_class_init,
+    .name          = TYPE_PXB_HOST,
+    .parent        = TYPE_PCI_HOST_BRIDGE,
+    .class_init    = pxb_host_class_init,
 };
 
 static void pxb_cxl_realize(DeviceState *dev, Error **errp)
@@ -205,7 +212,7 @@ static void pxb_cxl_realize(DeviceState *dev, Error **errp)
  */
 void pxb_cxl_hook_up_registers(CXLState *cxl_state, PCIBus *bus, Error **errp)
 {
-    PXBDev *pxb = PXB_CXL_DEV(pci_bridge_get_device(bus));
+    PXBDev *pxb =  PXB_CXL_DEV(pci_bridge_get_device(bus));
     CXLHost *cxl = pxb->cxl.cxl_host_bridge;
     CXLComponentState *cxl_cstate = &cxl->cxl_cstate;
     struct MemoryRegion *mr = &cxl_cstate->crb.component_registers;
@@ -238,10 +245,10 @@ static void pxb_cxl_host_class_init(ObjectClass *class, void *data)
  * else.
  */
 static const TypeInfo cxl_host_info = {
-    .name = TYPE_PXB_CXL_HOST,
-    .parent = TYPE_PCI_HOST_BRIDGE,
+    .name          = TYPE_PXB_CXL_HOST,
+    .parent        = TYPE_PCI_HOST_BRIDGE,
     .instance_size = sizeof(CXLHost),
-    .class_init = pxb_cxl_host_class_init,
+    .class_init    = pxb_cxl_host_class_init,
 };
 
 /*
@@ -257,8 +264,7 @@ static void pxb_register_bus(PCIDevice *dev, PCIBus *pxb_bus, Error **errp)
         return;
     }
 
-    QLIST_FOREACH(bus, &bus->child, sibling)
-    {
+    QLIST_FOREACH(bus, &bus->child, sibling) {
         if (pci_bus_num(bus) == pxb_bus_num) {
             error_setg(errp, "Bus %d is already in use", pxb_bus_num);
             return;
@@ -318,11 +324,9 @@ static void pxb_cxl_dev_reset(DeviceState *dev)
      * dsp_count == 1 case the same as the other cases.
      */
     if (dsp_count == 1) {
-        ARRAY_FIELD_DP32(reg_state, CXL_HDM_DECODER_CAPABILITY, TARGET_COUNT,
-                         8);
+        ARRAY_FIELD_DP32(reg_state, CXL_HDM_DECODER_CAPABILITY, TARGET_COUNT, 8);
     } else {
-        ARRAY_FIELD_DP32(reg_state, CXL_HDM_DECODER_CAPABILITY, TARGET_COUNT,
-                         8);
+        ARRAY_FIELD_DP32(reg_state, CXL_HDM_DECODER_CAPABILITY, TARGET_COUNT, 8);
     }
 }
 
@@ -330,9 +334,9 @@ static gint pxb_compare(gconstpointer a, gconstpointer b)
 {
     const PXBDev *pxb_a = a, *pxb_b = b;
 
-    return pxb_a->bus_nr < pxb_b->bus_nr   ? -1
-           : pxb_a->bus_nr > pxb_b->bus_nr ? 1
-                                           : 0;
+    return pxb_a->bus_nr < pxb_b->bus_nr ? -1 :
+           pxb_a->bus_nr > pxb_b->bus_nr ?  1 :
+           0;
 }
 
 static void pxb_dev_realize_common(PCIDevice *dev, enum BusType type,
@@ -450,15 +454,14 @@ static void pxb_dev_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo pxb_dev_info = {
-    .name = TYPE_PXB_DEVICE,
-    .parent = TYPE_PCI_DEVICE,
+    .name          = TYPE_PXB_DEVICE,
+    .parent        = TYPE_PCI_DEVICE,
     .instance_size = sizeof(PXBDev),
-    .class_init = pxb_dev_class_init,
-    .interfaces =
-        (InterfaceInfo[]) {
-            { INTERFACE_CONVENTIONAL_PCI_DEVICE },
-            {},
-        },
+    .class_init    = pxb_dev_class_init,
+    .interfaces = (InterfaceInfo[]) {
+        { INTERFACE_CONVENTIONAL_PCI_DEVICE },
+        { },
+    },
 };
 
 static void pxb_pcie_dev_realize(PCIDevice *dev, Error **errp)
@@ -489,15 +492,14 @@ static void pxb_pcie_dev_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo pxb_pcie_dev_info = {
-    .name = TYPE_PXB_PCIE_DEVICE,
-    .parent = TYPE_PCI_DEVICE,
+    .name          = TYPE_PXB_PCIE_DEVICE,
+    .parent        = TYPE_PCI_DEVICE,
     .instance_size = sizeof(PXBDev),
-    .class_init = pxb_pcie_dev_class_init,
-    .interfaces =
-        (InterfaceInfo[]) {
-            { INTERFACE_CONVENTIONAL_PCI_DEVICE },
-            {},
-        },
+    .class_init    = pxb_pcie_dev_class_init,
+    .interfaces = (InterfaceInfo[]) {
+        { INTERFACE_CONVENTIONAL_PCI_DEVICE },
+        { },
+    },
 };
 
 static void pxb_cxl_dev_realize(PCIDevice *dev, Error **errp)
@@ -523,11 +525,11 @@ static Property pxb_cxl_dev_properties[] = {
 
 static void pxb_cxl_dev_class_init(ObjectClass *klass, void *data)
 {
-    DeviceClass *dc = DEVICE_CLASS(klass);
+    DeviceClass *dc   = DEVICE_CLASS(klass);
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
 
-    k->realize = pxb_cxl_dev_realize;
-    k->exit = pxb_dev_exitfn;
+    k->realize             = pxb_cxl_dev_realize;
+    k->exit                = pxb_dev_exitfn;
     /*
      * XXX: These types of bridges don't actually show up in the hierarchy so
      * vendor, device, class, etc. ids are intentionally left out.
@@ -543,12 +545,12 @@ static void pxb_cxl_dev_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo pxb_cxl_dev_info = {
-    .name = TYPE_PXB_CXL_DEVICE,
-    .parent = TYPE_PCI_DEVICE,
+    .name          = TYPE_PXB_CXL_DEVICE,
+    .parent        = TYPE_PCI_DEVICE,
     .instance_size = sizeof(PXBDev),
-    .class_init = pxb_cxl_dev_class_init,
+    .class_init    = pxb_cxl_dev_class_init,
     .interfaces =
-        (InterfaceInfo[]) {
+        (InterfaceInfo[]){
             { INTERFACE_CONVENTIONAL_PCI_DEVICE },
             {},
         },

@@ -28,8 +28,8 @@ static void rp_aer_vector_update(PCIDevice *d)
     }
 }
 
-static void rp_write_config(PCIDevice *d, uint32_t address, uint32_t val,
-                            int len)
+static void rp_write_config(PCIDevice *d, uint32_t address,
+                            uint32_t val, int len)
 {
     uint32_t root_cmd =
         pci_get_long(d->config + d->exp.aer_cap + PCI_ERR_ROOT_COMMAND);
@@ -78,8 +78,8 @@ static void rp_realize(PCIDevice *d, Error **errp)
     }
     pcie_port_init_reg(d);
 
-    rc = pci_bridge_ssvid_init(d, rpc->ssvid_offset, dc->vendor_id, rpc->ssid,
-                               errp);
+    rc = pci_bridge_ssvid_init(d, rpc->ssvid_offset, dc->vendor_id,
+                               rpc->ssid, errp);
     if (rc < 0) {
         error_append_hint(errp, "Can't init SSV ID, error %d\n", rc);
         goto err_bridge;
@@ -92,13 +92,11 @@ static void rp_realize(PCIDevice *d, Error **errp)
         }
     }
 
-    rc = pcie_cap_init(d, rpc->exp_offset, PCI_EXP_TYPE_ROOT_PORT, p->port,
-                       errp);
+    rc = pcie_cap_init(d, rpc->exp_offset, PCI_EXP_TYPE_ROOT_PORT,
+                       p->port, errp);
     if (rc < 0) {
-        error_append_hint(errp,
-                          "Can't add Root Port capability, "
-                          "error %d\n",
-                          rc);
+        error_append_hint(errp, "Can't add Root Port capability, "
+                          "error %d\n", rc);
         goto err_int;
     }
 
@@ -114,7 +112,8 @@ static void rp_realize(PCIDevice *d, Error **errp)
         goto err_pcie_cap;
     }
 
-    rc = pcie_aer_init(d, PCI_ERR_VER, rpc->aer_offset, PCI_ERR_SIZEOF, errp);
+    rc = pcie_aer_init(d, PCI_ERR_VER, rpc->aer_offset,
+                       PCI_ERR_SIZEOF, errp);
     if (rc < 0) {
         goto err;
     }
@@ -189,13 +188,16 @@ static void rp_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo rp_info = {
-    .name = TYPE_PCIE_ROOT_PORT,
-    .parent = TYPE_PCIE_SLOT,
+    .name          = TYPE_PCIE_ROOT_PORT,
+    .parent        = TYPE_PCIE_SLOT,
     .instance_post_init = rp_instance_post_init,
-    .class_init = rp_class_init,
-    .abstract = true,
+    .class_init    = rp_class_init,
+    .abstract      = true,
     .class_size = sizeof(PCIERootPortClass),
-    .interfaces = (InterfaceInfo[]) { { INTERFACE_PCIE_DEVICE }, {} },
+    .interfaces = (InterfaceInfo[]) {
+        { INTERFACE_PCIE_DEVICE },
+        { }
+    },
 };
 
 static void rp_register_types(void)

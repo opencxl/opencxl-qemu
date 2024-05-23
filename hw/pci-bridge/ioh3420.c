@@ -28,16 +28,16 @@
 #include "migration/vmstate.h"
 #include "qemu/module.h"
 
-#define PCI_DEVICE_ID_IOH_EPORT 0x3420 /* D0:F0 express mode */
-#define PCI_DEVICE_ID_IOH_REV 0x2
-#define IOH_EP_SSVID_OFFSET 0x40
-#define IOH_EP_SSVID_SVID PCI_VENDOR_ID_INTEL
-#define IOH_EP_SSVID_SSID 0
-#define IOH_EP_MSI_OFFSET 0x60
-#define IOH_EP_MSI_SUPPORTED_FLAGS PCI_MSI_FLAGS_MASKBIT
-#define IOH_EP_MSI_NR_VECTOR 2
-#define IOH_EP_EXP_OFFSET 0x90
-#define IOH_EP_AER_OFFSET 0x100
+#define PCI_DEVICE_ID_IOH_EPORT         0x3420  /* D0:F0 express mode */
+#define PCI_DEVICE_ID_IOH_REV           0x2
+#define IOH_EP_SSVID_OFFSET             0x40
+#define IOH_EP_SSVID_SVID               PCI_VENDOR_ID_INTEL
+#define IOH_EP_SSVID_SSID               0
+#define IOH_EP_MSI_OFFSET               0x60
+#define IOH_EP_MSI_SUPPORTED_FLAGS      PCI_MSI_FLAGS_MASKBIT
+#define IOH_EP_MSI_NR_VECTOR            2
+#define IOH_EP_EXP_OFFSET               0x90
+#define IOH_EP_AER_OFFSET               0x100
 
 /*
  * If two MSI vector are allocated, Advanced Error Interrupt Message Number
@@ -68,7 +68,8 @@ static int ioh3420_interrupts_init(PCIDevice *d, Error **errp)
 
     rc = msi_init(d, IOH_EP_MSI_OFFSET, IOH_EP_MSI_NR_VECTOR,
                   IOH_EP_MSI_SUPPORTED_FLAGS & PCI_MSI_FLAGS_64BIT,
-                  IOH_EP_MSI_SUPPORTED_FLAGS & PCI_MSI_FLAGS_MASKBIT, errp);
+                  IOH_EP_MSI_SUPPORTED_FLAGS & PCI_MSI_FLAGS_MASKBIT,
+                  errp);
     if (rc < 0) {
         assert(rc == -ENOTSUP);
     }
@@ -87,12 +88,12 @@ static const VMStateDescription vmstate_ioh3420 = {
     .version_id = 1,
     .minimum_version_id = 1,
     .post_load = pcie_cap_slot_post_load,
-    .fields =
-        (VMStateField[]) {
-            VMSTATE_PCI_DEVICE(parent_obj.parent_obj.parent_obj, PCIESlot),
-            VMSTATE_STRUCT(parent_obj.parent_obj.parent_obj.exp.aer_log,
-                           PCIESlot, 0, vmstate_pcie_aer_log, PCIEAERLog),
-            VMSTATE_END_OF_LIST() }
+    .fields = (VMStateField[]) {
+        VMSTATE_PCI_DEVICE(parent_obj.parent_obj.parent_obj, PCIESlot),
+        VMSTATE_STRUCT(parent_obj.parent_obj.parent_obj.exp.aer_log,
+                       PCIESlot, 0, vmstate_pcie_aer_log, PCIEAERLog),
+        VMSTATE_END_OF_LIST()
+    }
 };
 
 static void ioh3420_class_init(ObjectClass *klass, void *data)
@@ -116,9 +117,9 @@ static void ioh3420_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo ioh3420_info = {
-    .name = "ioh3420",
-    .parent = TYPE_PCIE_ROOT_PORT,
-    .class_init = ioh3420_class_init,
+    .name          = "ioh3420",
+    .parent        = TYPE_PCIE_ROOT_PORT,
+    .class_init    = ioh3420_class_init,
 };
 
 static void ioh3420_register_types(void)

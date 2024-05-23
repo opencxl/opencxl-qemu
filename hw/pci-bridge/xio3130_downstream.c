@@ -30,19 +30,19 @@
 #include "qemu/module.h"
 #include "hw/pci-bridge/xio3130_downstream.h"
 
-#define PCI_DEVICE_ID_TI_XIO3130D 0x8233 /* downstream port */
-#define XIO3130_REVISION 0x1
-#define XIO3130_MSI_OFFSET 0x70
-#define XIO3130_MSI_SUPPORTED_FLAGS PCI_MSI_FLAGS_64BIT
-#define XIO3130_MSI_NR_VECTOR 1
-#define XIO3130_SSVID_OFFSET 0x80
-#define XIO3130_SSVID_SVID 0
-#define XIO3130_SSVID_SSID 0
-#define XIO3130_EXP_OFFSET 0x90
-#define XIO3130_AER_OFFSET 0x100
+#define PCI_DEVICE_ID_TI_XIO3130D       0x8233  /* downstream port */
+#define XIO3130_REVISION                0x1
+#define XIO3130_MSI_OFFSET              0x70
+#define XIO3130_MSI_SUPPORTED_FLAGS     PCI_MSI_FLAGS_64BIT
+#define XIO3130_MSI_NR_VECTOR           1
+#define XIO3130_SSVID_OFFSET            0x80
+#define XIO3130_SSVID_SVID              0
+#define XIO3130_SSVID_SSID              0
+#define XIO3130_EXP_OFFSET              0x90
+#define XIO3130_AER_OFFSET              0x100
 
 static void xio3130_downstream_write_config(PCIDevice *d, uint32_t address,
-                                            uint32_t val, int len)
+                                         uint32_t val, int len)
 {
     uint16_t slt_ctl, slt_sta;
 
@@ -74,20 +74,22 @@ static void xio3130_downstream_realize(PCIDevice *d, Error **errp)
 
     rc = msi_init(d, XIO3130_MSI_OFFSET, XIO3130_MSI_NR_VECTOR,
                   XIO3130_MSI_SUPPORTED_FLAGS & PCI_MSI_FLAGS_64BIT,
-                  XIO3130_MSI_SUPPORTED_FLAGS & PCI_MSI_FLAGS_MASKBIT, errp);
+                  XIO3130_MSI_SUPPORTED_FLAGS & PCI_MSI_FLAGS_MASKBIT,
+                  errp);
     if (rc < 0) {
         assert(rc == -ENOTSUP);
         goto err_bridge;
     }
 
-    rc = pci_bridge_ssvid_init(d, XIO3130_SSVID_OFFSET, XIO3130_SSVID_SVID,
-                               XIO3130_SSVID_SSID, errp);
+    rc = pci_bridge_ssvid_init(d, XIO3130_SSVID_OFFSET,
+                               XIO3130_SSVID_SVID, XIO3130_SSVID_SSID,
+                               errp);
     if (rc < 0) {
         goto err_msi;
     }
 
-    rc = pcie_cap_init(d, XIO3130_EXP_OFFSET, PCI_EXP_TYPE_DOWNSTREAM, p->port,
-                       errp);
+    rc = pcie_cap_init(d, XIO3130_EXP_OFFSET, PCI_EXP_TYPE_DOWNSTREAM,
+                       p->port, errp);
     if (rc < 0) {
         goto err_msi;
     }
@@ -103,8 +105,8 @@ static void xio3130_downstream_realize(PCIDevice *d, Error **errp)
         goto err_pcie_cap;
     }
 
-    rc =
-        pcie_aer_init(d, PCI_ERR_VER, XIO3130_AER_OFFSET, PCI_ERR_SIZEOF, errp);
+    rc = pcie_aer_init(d, PCI_ERR_VER, XIO3130_AER_OFFSET,
+                       PCI_ERR_SIZEOF, errp);
     if (rc < 0) {
         goto err;
     }
@@ -144,12 +146,12 @@ static const VMStateDescription vmstate_xio3130_downstream = {
     .version_id = 1,
     .minimum_version_id = 1,
     .post_load = pcie_cap_slot_post_load,
-    .fields =
-        (VMStateField[]) {
-            VMSTATE_PCI_DEVICE(parent_obj.parent_obj.parent_obj, PCIESlot),
-            VMSTATE_STRUCT(parent_obj.parent_obj.parent_obj.exp.aer_log,
-                           PCIESlot, 0, vmstate_pcie_aer_log, PCIEAERLog),
-            VMSTATE_END_OF_LIST() }
+    .fields = (VMStateField[]) {
+        VMSTATE_PCI_DEVICE(parent_obj.parent_obj.parent_obj, PCIESlot),
+        VMSTATE_STRUCT(parent_obj.parent_obj.parent_obj.exp.aer_log,
+                       PCIESlot, 0, vmstate_pcie_aer_log, PCIEAERLog),
+        VMSTATE_END_OF_LIST()
+    }
 };
 
 static void xio3130_downstream_class_init(ObjectClass *klass, void *data)
@@ -171,10 +173,13 @@ static void xio3130_downstream_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo xio3130_downstream_info = {
-    .name = TYPE_XIO3130_DOWNSTREAM,
-    .parent = TYPE_PCIE_SLOT,
-    .class_init = xio3130_downstream_class_init,
-    .interfaces = (InterfaceInfo[]) { { INTERFACE_PCIE_DEVICE }, {} },
+    .name          = TYPE_XIO3130_DOWNSTREAM,
+    .parent        = TYPE_PCIE_SLOT,
+    .class_init    = xio3130_downstream_class_init,
+    .interfaces = (InterfaceInfo[]) {
+        { INTERFACE_PCIE_DEVICE },
+        { }
+    },
 };
 
 static void xio3130_downstream_register_types(void)

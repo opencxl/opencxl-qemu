@@ -40,19 +40,21 @@ enum reg_type {
 
 /* CXL 2.0 - 8.2.5.1 */
 REG32(CXL_CAPABILITY_HEADER, 0)
-FIELD(CXL_CAPABILITY_HEADER, ID, 0, 16)
-FIELD(CXL_CAPABILITY_HEADER, VERSION, 16, 4)
-FIELD(CXL_CAPABILITY_HEADER, CACHE_MEM_VERSION, 20, 4)
-FIELD(CXL_CAPABILITY_HEADER, ARRAY_SIZE, 24, 8)
+    FIELD(CXL_CAPABILITY_HEADER, ID, 0, 16)
+    FIELD(CXL_CAPABILITY_HEADER, VERSION, 16, 4)
+    FIELD(CXL_CAPABILITY_HEADER, CACHE_MEM_VERSION, 20, 4)
+    FIELD(CXL_CAPABILITY_HEADER, ARRAY_SIZE, 24, 8)
 
-#define CXLx_CAPABILITY_HEADER(type, offset)              \
-    REG32(CXL_##type##_CAPABILITY_HEADER, offset)         \
-    FIELD(CXL_##type##_CAPABILITY_HEADER, ID, 0, 16)      \
-    FIELD(CXL_##type##_CAPABILITY_HEADER, VERSION, 16, 4) \
-    FIELD(CXL_##type##_CAPABILITY_HEADER, PTR, 20, 12)
-CXLx_CAPABILITY_HEADER(RAS, 0x4) CXLx_CAPABILITY_HEADER(LINK, 0x8)
-    CXLx_CAPABILITY_HEADER(HDM, 0xc) CXLx_CAPABILITY_HEADER(
-        EXTSEC, 0x10) CXLx_CAPABILITY_HEADER(SNOOP, 0x14)
+#define CXLx_CAPABILITY_HEADER(type, offset)                  \
+    REG32(CXL_##type##_CAPABILITY_HEADER, offset)             \
+        FIELD(CXL_##type##_CAPABILITY_HEADER, ID, 0, 16)      \
+        FIELD(CXL_##type##_CAPABILITY_HEADER, VERSION, 16, 4) \
+        FIELD(CXL_##type##_CAPABILITY_HEADER, PTR, 20, 12)
+CXLx_CAPABILITY_HEADER(RAS, 0x4)
+CXLx_CAPABILITY_HEADER(LINK, 0x8)
+CXLx_CAPABILITY_HEADER(HDM, 0xc)
+CXLx_CAPABILITY_HEADER(EXTSEC, 0x10)
+CXLx_CAPABILITY_HEADER(SNOOP, 0x14)
 
 /*
  * Capability structures contain the actual registers that the CXL component
@@ -63,8 +65,8 @@ CXLx_CAPABILITY_HEADER(RAS, 0x4) CXLx_CAPABILITY_HEADER(LINK, 0x8)
 
 /* Give ample space for caps before this */
 #define CXL_RAS_REGISTERS_OFFSET 0x80
-#define CXL_RAS_REGISTERS_SIZE 0x58
-        REG32(CXL_RAS_UNC_ERR_STATUS, CXL_RAS_REGISTERS_OFFSET)
+#define CXL_RAS_REGISTERS_SIZE   0x58
+REG32(CXL_RAS_UNC_ERR_STATUS, CXL_RAS_REGISTERS_OFFSET)
 #define CXL_RAS_UNC_ERR_CACHE_DATA_PARITY 0
 #define CXL_RAS_UNC_ERR_CACHE_ADDRESS_PARITY 1
 #define CXL_RAS_UNC_ERR_CACHE_BE_PARITY 2
@@ -81,12 +83,9 @@ CXLx_CAPABILITY_HEADER(RAS, 0x4) CXLx_CAPABILITY_HEADER(LINK, 0x8)
 #define CXL_RAS_UNC_ERR_CXL_IDE_TX 15
 #define CXL_RAS_UNC_ERR_CXL_IDE_RX 16
 #define CXL_RAS_UNC_ERR_CXL_UNUSED 63 /* Magic value */
-            REG32(CXL_RAS_UNC_ERR_MASK,
-                  CXL_RAS_REGISTERS_OFFSET +
-                      0x4) REG32(CXL_RAS_UNC_ERR_SEVERITY,
-                                 CXL_RAS_REGISTERS_OFFSET +
-                                     0x8) REG32(CXL_RAS_COR_ERR_STATUS,
-                                                CXL_RAS_REGISTERS_OFFSET + 0xc)
+REG32(CXL_RAS_UNC_ERR_MASK, CXL_RAS_REGISTERS_OFFSET + 0x4)
+REG32(CXL_RAS_UNC_ERR_SEVERITY, CXL_RAS_REGISTERS_OFFSET + 0x8)
+REG32(CXL_RAS_COR_ERR_STATUS, CXL_RAS_REGISTERS_OFFSET + 0xc)
 #define CXL_RAS_COR_ERR_CACHE_DATA_ECC 0
 #define CXL_RAS_COR_ERR_MEM_DATA_ECC 1
 #define CXL_RAS_COR_ERR_CRC_THRESHOLD 2
@@ -94,93 +93,81 @@ CXLx_CAPABILITY_HEADER(RAS, 0x4) CXLx_CAPABILITY_HEADER(LINK, 0x8)
 #define CXL_RAS_COR_ERR_CACHE_POISON_RECEIVED 4
 #define CXL_RAS_COR_ERR_MEM_POISON_RECEIVED 5
 #define CXL_RAS_COR_ERR_PHYSICAL 6
-                REG32(CXL_RAS_COR_ERR_MASK,
-                      CXL_RAS_REGISTERS_OFFSET +
-                          0x10) REG32(CXL_RAS_ERR_CAP_CTRL,
-                                      CXL_RAS_REGISTERS_OFFSET + 0x14)
-                    FIELD(CXL_RAS_ERR_CAP_CTRL, FIRST_ERROR_POINTER, 0,
-                          6) REG32(CXL_RAS_ERR_HEADER0,
-                                   CXL_RAS_REGISTERS_OFFSET + 0x18)
+REG32(CXL_RAS_COR_ERR_MASK, CXL_RAS_REGISTERS_OFFSET + 0x10)
+REG32(CXL_RAS_ERR_CAP_CTRL, CXL_RAS_REGISTERS_OFFSET + 0x14)
+    FIELD(CXL_RAS_ERR_CAP_CTRL, FIRST_ERROR_POINTER, 0, 6)
+REG32(CXL_RAS_ERR_HEADER0, CXL_RAS_REGISTERS_OFFSET + 0x18)
 #define CXL_RAS_ERR_HEADER_NUM 32
 /* Offset 0x18 - 0x58 reserved for RAS logs */
 
 /* 8.2.5.10 - CXL Security Capability Structure */
 #define CXL_SEC_REGISTERS_OFFSET \
     (CXL_RAS_REGISTERS_OFFSET + CXL_RAS_REGISTERS_SIZE)
-#define CXL_SEC_REGISTERS_SIZE 0 /* We don't implement 1.1 downstream ports */
+#define CXL_SEC_REGISTERS_SIZE   0 /* We don't implement 1.1 downstream ports */
 
 /* 8.2.5.11 - CXL Link Capability Structure */
 #define CXL_LINK_REGISTERS_OFFSET \
     (CXL_SEC_REGISTERS_OFFSET + CXL_SEC_REGISTERS_SIZE)
-#define CXL_LINK_REGISTERS_SIZE 0x38
+#define CXL_LINK_REGISTERS_SIZE   0x38
 
 /* 8.2.5.12 - CXL HDM Decoder Capability Structure */
 #define HDM_DECODE_MAX 10 /* 8.2.5.12.1 */
 #define CXL_HDM_REGISTERS_OFFSET \
     (CXL_LINK_REGISTERS_OFFSET + CXL_LINK_REGISTERS_SIZE)
 #define CXL_HDM_REGISTERS_SIZE (0x10 + 0x20 * HDM_DECODE_MAX)
-#define HDM_DECODER_INIT(n)                                \
-    REG32(CXL_HDM_DECODER##n##_BASE_LO,                    \
-          CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x10)    \
-    FIELD(CXL_HDM_DECODER##n##_BASE_LO, L, 28, 4)          \
-    REG32(CXL_HDM_DECODER##n##_BASE_HI,                    \
-          CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x14)    \
-    REG32(CXL_HDM_DECODER##n##_SIZE_LO,                    \
-          CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x18)    \
-    REG32(CXL_HDM_DECODER##n##_SIZE_HI,                    \
-          CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x1C)    \
-    REG32(CXL_HDM_DECODER##n##_CTRL,                       \
-          CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x20)    \
-    FIELD(CXL_HDM_DECODER##n##_CTRL, IG, 0, 4)             \
-    FIELD(CXL_HDM_DECODER##n##_CTRL, IW, 4, 4)             \
-    FIELD(CXL_HDM_DECODER##n##_CTRL, LOCK_ON_COMMIT, 8, 1) \
-    FIELD(CXL_HDM_DECODER##n##_CTRL, COMMIT, 9, 1)         \
-    FIELD(CXL_HDM_DECODER##n##_CTRL, COMMITTED, 10, 1)     \
-    FIELD(CXL_HDM_DECODER##n##_CTRL, ERR, 11, 1)           \
-    FIELD(CXL_HDM_DECODER##n##_CTRL, TYPE, 12, 1)          \
-    REG32(CXL_HDM_DECODER##n##_TARGET_LIST_LO,             \
-          CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x24)    \
-    REG32(CXL_HDM_DECODER##n##_TARGET_LIST_HI,             \
-          CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x28)
+#define HDM_DECODER_INIT(n)                                                    \
+  REG32(CXL_HDM_DECODER##n##_BASE_LO,                                          \
+        CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x10)                          \
+            FIELD(CXL_HDM_DECODER##n##_BASE_LO, L, 28, 4)                      \
+  REG32(CXL_HDM_DECODER##n##_BASE_HI,                                          \
+        CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x14)                          \
+  REG32(CXL_HDM_DECODER##n##_SIZE_LO,                                          \
+        CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x18)                          \
+  REG32(CXL_HDM_DECODER##n##_SIZE_HI,                                          \
+        CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x1C)                          \
+  REG32(CXL_HDM_DECODER##n##_CTRL,                                             \
+        CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x20)                          \
+            FIELD(CXL_HDM_DECODER##n##_CTRL, IG, 0, 4)                         \
+            FIELD(CXL_HDM_DECODER##n##_CTRL, IW, 4, 4)                         \
+            FIELD(CXL_HDM_DECODER##n##_CTRL, LOCK_ON_COMMIT, 8, 1)             \
+            FIELD(CXL_HDM_DECODER##n##_CTRL, COMMIT, 9, 1)                     \
+            FIELD(CXL_HDM_DECODER##n##_CTRL, COMMITTED, 10, 1)                 \
+            FIELD(CXL_HDM_DECODER##n##_CTRL, ERR, 11, 1)                       \
+            FIELD(CXL_HDM_DECODER##n##_CTRL, TYPE, 12, 1)                      \
+  REG32(CXL_HDM_DECODER##n##_TARGET_LIST_LO,                                   \
+        CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x24)                          \
+  REG32(CXL_HDM_DECODER##n##_TARGET_LIST_HI,                                   \
+        CXL_HDM_REGISTERS_OFFSET + (0x20 * n) + 0x28)
 
-                        REG32(CXL_HDM_DECODER_CAPABILITY,
-                              CXL_HDM_REGISTERS_OFFSET)
-                            FIELD(CXL_HDM_DECODER_CAPABILITY, DECODER_COUNT, 0,
-                                  4) FIELD(CXL_HDM_DECODER_CAPABILITY,
-                                           TARGET_COUNT, 4,
-                                           4) FIELD(CXL_HDM_DECODER_CAPABILITY,
-                                                    INTERLEAVE_256B, 8, 1)
-                                FIELD(CXL_HDM_DECODER_CAPABILITY, INTERLEAVE_4K,
-                                      9, 1) FIELD(CXL_HDM_DECODER_CAPABILITY,
-                                                  POISON_ON_ERR_CAP, 10, 1)
-                                    REG32(CXL_HDM_DECODER_GLOBAL_CONTROL,
-                                          CXL_HDM_REGISTERS_OFFSET + 4)
-                                        FIELD(CXL_HDM_DECODER_GLOBAL_CONTROL,
-                                              POISON_ON_ERR_EN, 0, 1)
-                                            FIELD(
-                                                CXL_HDM_DECODER_GLOBAL_CONTROL,
-                                                HDM_DECODER_ENABLE, 1, 1)
+REG32(CXL_HDM_DECODER_CAPABILITY, CXL_HDM_REGISTERS_OFFSET)
+    FIELD(CXL_HDM_DECODER_CAPABILITY, DECODER_COUNT, 0, 4)
+    FIELD(CXL_HDM_DECODER_CAPABILITY, TARGET_COUNT, 4, 4)
+    FIELD(CXL_HDM_DECODER_CAPABILITY, INTERLEAVE_256B, 8, 1)
+    FIELD(CXL_HDM_DECODER_CAPABILITY, INTERLEAVE_4K, 9, 1)
+    FIELD(CXL_HDM_DECODER_CAPABILITY, POISON_ON_ERR_CAP, 10, 1)
+REG32(CXL_HDM_DECODER_GLOBAL_CONTROL, CXL_HDM_REGISTERS_OFFSET + 4)
+    FIELD(CXL_HDM_DECODER_GLOBAL_CONTROL, POISON_ON_ERR_EN, 0, 1)
+    FIELD(CXL_HDM_DECODER_GLOBAL_CONTROL, HDM_DECODER_ENABLE, 1, 1)
 
-                                                HDM_DECODER_INIT(0);
+HDM_DECODER_INIT(0);
 
 /* 8.2.5.13 - CXL Extended Security Capability Structure (Root complex only) */
-#define EXTSEC_ENTRY_MAX 256
+#define EXTSEC_ENTRY_MAX        256
 #define CXL_EXTSEC_REGISTERS_OFFSET \
     (CXL_HDM_REGISTERS_OFFSET + CXL_HDM_REGISTERS_SIZE)
-#define CXL_EXTSEC_REGISTERS_SIZE (8 * EXTSEC_ENTRY_MAX + 4)
+#define CXL_EXTSEC_REGISTERS_SIZE   (8 * EXTSEC_ENTRY_MAX + 4)
 
 /* 8.2.5.14 - CXL IDE Capability Structure */
 #define CXL_IDE_REGISTERS_OFFSET \
     (CXL_EXTSEC_REGISTERS_OFFSET + CXL_EXTSEC_REGISTERS_SIZE)
-#define CXL_IDE_REGISTERS_SIZE 0x20
+#define CXL_IDE_REGISTERS_SIZE   0x20
 
 /* 8.2.5.15 - CXL Snoop Filter Capability Structure */
 #define CXL_SNOOP_REGISTERS_OFFSET \
     (CXL_IDE_REGISTERS_OFFSET + CXL_IDE_REGISTERS_SIZE)
-#define CXL_SNOOP_REGISTERS_SIZE 0x8
+#define CXL_SNOOP_REGISTERS_SIZE   0x8
 
-QEMU_BUILD_BUG_MSG((CXL_SNOOP_REGISTERS_OFFSET + CXL_SNOOP_REGISTERS_SIZE) >=
-                       0x1000,
+QEMU_BUILD_BUG_MSG((CXL_SNOOP_REGISTERS_OFFSET + CXL_SNOOP_REGISTERS_SIZE) >= 0x1000,
                    "No space for registers");
 
 typedef struct component_registers {
@@ -243,18 +230,12 @@ void cxl_component_create_dvsec(CXLComponentState *cxl_cstate,
 static inline int cxl_decoder_count_enc(int count)
 {
     switch (count) {
-    case 1:
-        return 0;
-    case 2:
-        return 1;
-    case 4:
-        return 2;
-    case 6:
-        return 3;
-    case 8:
-        return 4;
-    case 10:
-        return 5;
+    case 1: return 0;
+    case 2: return 1;
+    case 4: return 2;
+    case 6: return 3;
+    case 8: return 4;
+    case 10: return 5;
     }
     return 0;
 }

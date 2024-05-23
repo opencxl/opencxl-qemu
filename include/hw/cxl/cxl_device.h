@@ -60,28 +60,28 @@
  */
 
 #define CXL_DEVICE_CAP_HDR1_OFFSET 0x10 /* Figure 138 */
-#define CXL_DEVICE_CAP_REG_SIZE    0x10 /* 8.2.8.2 */
-#define CXL_DEVICE_CAPS_MAX        4 /* 8.2.8.2.1 + 8.2.8.5 */
-#define CXL_CAPS_SIZE                                                          \
+#define CXL_DEVICE_CAP_REG_SIZE 0x10 /* 8.2.8.2 */
+#define CXL_DEVICE_CAPS_MAX 4 /* 8.2.8.2.1 + 8.2.8.5 */
+#define CXL_CAPS_SIZE \
     (CXL_DEVICE_CAP_REG_SIZE * (CXL_DEVICE_CAPS_MAX + 1)) /* +1 for header */
 
 #define CXL_DEVICE_STATUS_REGISTERS_OFFSET 0x80 /* Read comment above */
 #define CXL_DEVICE_STATUS_REGISTERS_LENGTH 0x8 /* 8.2.8.3.1 */
 
-#define CXL_MAILBOX_REGISTERS_OFFSET                                           \
+#define CXL_MAILBOX_REGISTERS_OFFSET \
     (CXL_DEVICE_STATUS_REGISTERS_OFFSET + CXL_DEVICE_STATUS_REGISTERS_LENGTH)
-#define CXL_MAILBOX_REGISTERS_SIZE   0x20 /* 8.2.8.4, Figure 139 */
-#define CXL_MAILBOX_PAYLOAD_SHIFT    11
+#define CXL_MAILBOX_REGISTERS_SIZE 0x20 /* 8.2.8.4, Figure 139 */
+#define CXL_MAILBOX_PAYLOAD_SHIFT 11
 #define CXL_MAILBOX_MAX_PAYLOAD_SIZE (1 << CXL_MAILBOX_PAYLOAD_SHIFT)
-#define CXL_MAILBOX_REGISTERS_LENGTH                                           \
+#define CXL_MAILBOX_REGISTERS_LENGTH \
     (CXL_MAILBOX_REGISTERS_SIZE + CXL_MAILBOX_MAX_PAYLOAD_SIZE)
 
-#define CXL_MEMORY_DEVICE_REGISTERS_OFFSET                                     \
+#define CXL_MEMORY_DEVICE_REGISTERS_OFFSET \
     (CXL_MAILBOX_REGISTERS_OFFSET + CXL_MAILBOX_REGISTERS_LENGTH)
 #define CXL_MEMORY_DEVICE_REGISTERS_LENGTH 0x8
 
-#define CXL_MMIO_SIZE                                                          \
-    (CXL_DEVICE_CAP_REG_SIZE + CXL_DEVICE_STATUS_REGISTERS_LENGTH +            \
+#define CXL_MMIO_SIZE                                               \
+    (CXL_DEVICE_CAP_REG_SIZE + CXL_DEVICE_STATUS_REGISTERS_LENGTH + \
      CXL_MAILBOX_REGISTERS_LENGTH + CXL_MEMORY_DEVICE_REGISTERS_LENGTH)
 
 typedef struct cxl_device_state {
@@ -157,13 +157,13 @@ FIELD(CXL_DEV_CAP_ARRAY, CAP_COUNT, 32, 16)
  * Here we've chosen to make it 4 dwords. The spec allows any pow2 multiple
  * access to be used for a register up to 64 bits.
  */
-#define CXL_DEVICE_CAPABILITY_HEADER_REGISTER(n, offset)                       \
-    REG32(CXL_DEV_##n##_CAP_HDR0, offset)                                      \
-    FIELD(CXL_DEV_##n##_CAP_HDR0, CAP_ID, 0, 16)                               \
-    FIELD(CXL_DEV_##n##_CAP_HDR0, CAP_VERSION, 16, 8)                          \
-    REG32(CXL_DEV_##n##_CAP_HDR1, offset + 4)                                  \
-    FIELD(CXL_DEV_##n##_CAP_HDR1, CAP_OFFSET, 0, 32)                           \
-    REG32(CXL_DEV_##n##_CAP_HDR2, offset + 8)                                  \
+#define CXL_DEVICE_CAPABILITY_HEADER_REGISTER(n, offset) \
+    REG32(CXL_DEV_##n##_CAP_HDR0, offset)                \
+    FIELD(CXL_DEV_##n##_CAP_HDR0, CAP_ID, 0, 16)         \
+    FIELD(CXL_DEV_##n##_CAP_HDR0, CAP_VERSION, 16, 8)    \
+    REG32(CXL_DEV_##n##_CAP_HDR1, offset + 4)            \
+    FIELD(CXL_DEV_##n##_CAP_HDR1, CAP_OFFSET, 0, 32)     \
+    REG32(CXL_DEV_##n##_CAP_HDR2, offset + 8)            \
     FIELD(CXL_DEV_##n##_CAP_HDR2, CAP_LENGTH, 0, 32)
 
 CXL_DEVICE_CAPABILITY_HEADER_REGISTER(DEVICE_STATUS, CXL_DEVICE_CAP_HDR1_OFFSET)
@@ -176,20 +176,20 @@ CXL_DEVICE_CAPABILITY_HEADER_REGISTER(MEMORY_DEVICE,
 void cxl_initialize_mailbox(CXLDeviceState *cxl_dstate);
 void cxl_process_mailbox(CXLDeviceState *cxl_dstate);
 
-#define cxl_device_cap_init(dstate, reg, cap_id)                               \
-    do {                                                                       \
-        uint32_t *cap_hdrs = dstate->caps_reg_state32;                         \
-        int which = R_CXL_DEV_##reg##_CAP_HDR0;                                \
-        cap_hdrs[which] = FIELD_DP32(                                          \
-            cap_hdrs[which], CXL_DEV_##reg##_CAP_HDR0, CAP_ID, cap_id);        \
-        cap_hdrs[which] = FIELD_DP32(                                          \
-            cap_hdrs[which], CXL_DEV_##reg##_CAP_HDR0, CAP_VERSION, 1);        \
-        cap_hdrs[which + 1] =                                                  \
-            FIELD_DP32(cap_hdrs[which + 1], CXL_DEV_##reg##_CAP_HDR1,          \
-                       CAP_OFFSET, CXL_##reg##_REGISTERS_OFFSET);              \
-        cap_hdrs[which + 2] =                                                  \
-            FIELD_DP32(cap_hdrs[which + 2], CXL_DEV_##reg##_CAP_HDR2,          \
-                       CAP_LENGTH, CXL_##reg##_REGISTERS_LENGTH);              \
+#define cxl_device_cap_init(dstate, reg, cap_id)                        \
+    do {                                                                \
+        uint32_t *cap_hdrs = dstate->caps_reg_state32;                  \
+        int which = R_CXL_DEV_##reg##_CAP_HDR0;                         \
+        cap_hdrs[which] = FIELD_DP32(                                   \
+            cap_hdrs[which], CXL_DEV_##reg##_CAP_HDR0, CAP_ID, cap_id); \
+        cap_hdrs[which] = FIELD_DP32(                                   \
+            cap_hdrs[which], CXL_DEV_##reg##_CAP_HDR0, CAP_VERSION, 1); \
+        cap_hdrs[which + 1] =                                           \
+            FIELD_DP32(cap_hdrs[which + 1], CXL_DEV_##reg##_CAP_HDR1,   \
+                       CAP_OFFSET, CXL_##reg##_REGISTERS_OFFSET);       \
+        cap_hdrs[which + 2] =                                           \
+            FIELD_DP32(cap_hdrs[which + 2], CXL_DEV_##reg##_CAP_HDR2,   \
+                       CAP_LENGTH, CXL_##reg##_REGISTERS_LENGTH);       \
     } while (0)
 
 /* CXL 2.0 8.2.8.4.3 Mailbox Capabilities Register */

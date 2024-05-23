@@ -10,7 +10,7 @@
 #ifndef CXL_TYPE2_HCOH_H
 #define CXL_TYPE2_HCOH_H
 
-#define CFMWS_BASE_ADDR      (0x490000000)
+#define CFMWS_BASE_ADDR (0x490000000)
 #define HOST_BIAS_TABLE_SIZE (2)
 #define HOST_BIAS_ENTRY_SIZE (0x8000000)
 
@@ -30,15 +30,15 @@ typedef enum {
 } MemCommand;
 
 #if (CXL_HCOH_BIAS_PRINT == 1)
-#define CXL_HCOH_BIAS(addr, fmt, args...)                                      \
-    do {                                                                       \
-        if (1) {                                                               \
-            error_report("[%s:%d] " fmt, __func__, __LINE__, ##args);          \
-        }                                                                      \
+#define CXL_HCOH_BIAS(addr, fmt, args...)                             \
+    do {                                                              \
+        if (1) {                                                      \
+            error_report("[%s:%d] " fmt, __func__, __LINE__, ##args); \
+        }                                                             \
     } while (0)
 #else
-#define CXL_HCOH_BIAS(fmt, args...)                                            \
-    do {                                                                       \
+#define CXL_HCOH_BIAS(fmt, args...) \
+    do {                            \
     } while (0)
 #endif
 

@@ -24,11 +24,11 @@
 OBJECT_DECLARE_SIMPLE_TYPE(GenPCIERootPort, GEN_PCIE_ROOT_PORT)
 
 #define GEN_PCIE_ROOT_PORT_AER_OFFSET 0x100
-#define GEN_PCIE_ROOT_PORT_ACS_OFFSET                                          \
+#define GEN_PCIE_ROOT_PORT_ACS_OFFSET \
     (GEN_PCIE_ROOT_PORT_AER_OFFSET + PCI_ERR_SIZEOF)
 
 #define GEN_PCIE_ROOT_PORT_MSIX_NR_VECTOR 1
-#define GEN_PCIE_ROOT_DEFAULT_IO_RANGE    4096
+#define GEN_PCIE_ROOT_DEFAULT_IO_RANGE 4096
 
 struct GenPCIERootPort {
     /*< private >*/
@@ -41,7 +41,10 @@ struct GenPCIERootPort {
     PCIResReserve res_reserve;
 };
 
-static uint8_t gen_rp_aer_vector(const PCIDevice *d) { return 0; }
+static uint8_t gen_rp_aer_vector(const PCIDevice *d)
+{
+    return 0;
+}
 
 static int gen_rp_interrupts_init(PCIDevice *d, Error **errp)
 {

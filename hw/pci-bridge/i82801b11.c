@@ -50,8 +50,8 @@
 /*****************************************************************************/
 /* ICH9 DMI-to-PCI bridge */
 #define I82801ba_SSVID_OFFSET 0x50
-#define I82801ba_SSVID_SVID   0
-#define I82801ba_SSVID_SSID   0
+#define I82801ba_SSVID_SVID 0
+#define I82801ba_SSVID_SSID 0
 
 typedef struct I82801b11Bridge {
     /*< private >*/

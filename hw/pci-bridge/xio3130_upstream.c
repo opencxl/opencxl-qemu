@@ -27,16 +27,16 @@
 #include "migration/vmstate.h"
 #include "qemu/module.h"
 
-#define PCI_DEVICE_ID_TI_XIO3130U   0x8232 /* upstream port */
-#define XIO3130_REVISION            0x2
-#define XIO3130_MSI_OFFSET          0x70
+#define PCI_DEVICE_ID_TI_XIO3130U 0x8232 /* upstream port */
+#define XIO3130_REVISION 0x2
+#define XIO3130_MSI_OFFSET 0x70
 #define XIO3130_MSI_SUPPORTED_FLAGS PCI_MSI_FLAGS_64BIT
-#define XIO3130_MSI_NR_VECTOR       1
-#define XIO3130_SSVID_OFFSET        0x80
-#define XIO3130_SSVID_SVID          0
-#define XIO3130_SSVID_SSID          0
-#define XIO3130_EXP_OFFSET          0x90
-#define XIO3130_AER_OFFSET          0x100
+#define XIO3130_MSI_NR_VECTOR 1
+#define XIO3130_SSVID_OFFSET 0x80
+#define XIO3130_SSVID_SVID 0
+#define XIO3130_SSVID_SSID 0
+#define XIO3130_EXP_OFFSET 0x90
+#define XIO3130_AER_OFFSET 0x100
 
 static void xio3130_upstream_write_config(PCIDevice *d, uint32_t address,
                                           uint32_t val, int len)

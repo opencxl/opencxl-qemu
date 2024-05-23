@@ -18,10 +18,10 @@
 
 #define CXL_UPSTREAM_PORT_MSI_NR_VECTOR 2
 
-#define CXL_UPSTREAM_PORT_MSI_OFFSET      0x70
+#define CXL_UPSTREAM_PORT_MSI_OFFSET 0x70
 #define CXL_UPSTREAM_PORT_PCIE_CAP_OFFSET 0x90
-#define CXL_UPSTREAM_PORT_AER_OFFSET      0x100
-#define CXL_UPSTREAM_PORT_DVSEC_OFFSET                                         \
+#define CXL_UPSTREAM_PORT_AER_OFFSET 0x100
+#define CXL_UPSTREAM_PORT_DVSEC_OFFSET \
     (CXL_UPSTREAM_PORT_AER_OFFSET + PCI_ERR_SIZEOF)
 
 static void cxl_usp_dvsec_write_config(PCIDevice *dev, uint32_t addr,
@@ -381,6 +381,9 @@ static const TypeInfo cxl_usp_info = {
                                       {} },
 };
 
-static void cxl_usp_register_type(void) { type_register_static(&cxl_usp_info); }
+static void cxl_usp_register_type(void)
+{
+    type_register_static(&cxl_usp_info);
+}
 
 type_init(cxl_usp_register_type);

@@ -17,11 +17,11 @@
 #include "hw/pci/pcie.h"
 #include "hw/pci/pcie_port.h"
 
-#define CXL_DOWNSTREAM_PORT_MSI_OFFSET    0x70
+#define CXL_DOWNSTREAM_PORT_MSI_OFFSET 0x70
 #define CXL_DOWNSTREAM_PORT_MSI_NR_VECTOR 1
-#define CXL_DOWNSTREAM_PORT_EXP_OFFSET    0x90
-#define CXL_DOWNSTREAM_PORT_AER_OFFSET    0x100
-#define CXL_DOWNSTREAM_PORT_DVSEC_OFFSET                                       \
+#define CXL_DOWNSTREAM_PORT_EXP_OFFSET 0x90
+#define CXL_DOWNSTREAM_PORT_AER_OFFSET 0x100
+#define CXL_DOWNSTREAM_PORT_DVSEC_OFFSET \
     (CXL_DOWNSTREAM_PORT_AER_OFFSET + PCI_ERR_SIZEOF)
 
 static void latch_registers(CXLDownstreamPort *dsp)
@@ -222,6 +222,9 @@ static const TypeInfo cxl_dsp_info = {
                                       {} },
 };
 
-static void cxl_dsp_register_type(void) { type_register_static(&cxl_dsp_info); }
+static void cxl_dsp_register_type(void)
+{
+    type_register_static(&cxl_dsp_info);
+}
 
 type_init(cxl_dsp_register_type);

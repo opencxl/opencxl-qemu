@@ -19,12 +19,12 @@
  *   Compute Express Link (CXL) Specification, Rev. 3.0, Aug. 2022
  */
 /* Table Access DOE - CXL r3.0 8.1.11 */
-#define CXL_DOE_TABLE_ACCESS  2
+#define CXL_DOE_TABLE_ACCESS 2
 #define CXL_DOE_PROTOCOL_CDAT ((CXL_DOE_TABLE_ACCESS << 16) | CXL_VENDOR_ID)
 
 /* Read Entry - CXL r3.0 8.1.11.1 */
 #define CXL_DOE_TAB_TYPE_CDAT 0
-#define CXL_DOE_TAB_ENT_MAX   0xFFFF
+#define CXL_DOE_TAB_ENT_MAX 0xFFFF
 
 /* Read Entry Request - CXL r3.0 8.1.11.1 Table 8-13 */
 #define CXL_DOE_TAB_REQ 0
@@ -75,8 +75,8 @@ typedef struct CDATDsmas {
     CDATSubHeader header;
     uint8_t DSMADhandle;
     uint8_t flags;
-#define CDAT_DSMAS_FLAG_NV          (1 << 2)
-#define CDAT_DSMAS_FLAG_SHAREABLE   (1 << 3)
+#define CDAT_DSMAS_FLAG_NV (1 << 2)
+#define CDAT_DSMAS_FLAG_SHAREABLE (1 << 3)
 #define CDAT_DSMAS_FLAG_HW_COHERENT (1 << 4)
 #define CDAT_DSMAS_FLAG_DYNAMIC_CAP (1 << 5)
     uint16_t reserved;

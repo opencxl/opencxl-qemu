@@ -28,16 +28,16 @@
 #include "migration/vmstate.h"
 #include "qemu/module.h"
 
-#define PCI_DEVICE_ID_IOH_EPORT    0x3420 /* D0:F0 express mode */
-#define PCI_DEVICE_ID_IOH_REV      0x2
-#define IOH_EP_SSVID_OFFSET        0x40
-#define IOH_EP_SSVID_SVID          PCI_VENDOR_ID_INTEL
-#define IOH_EP_SSVID_SSID          0
-#define IOH_EP_MSI_OFFSET          0x60
+#define PCI_DEVICE_ID_IOH_EPORT 0x3420 /* D0:F0 express mode */
+#define PCI_DEVICE_ID_IOH_REV 0x2
+#define IOH_EP_SSVID_OFFSET 0x40
+#define IOH_EP_SSVID_SVID PCI_VENDOR_ID_INTEL
+#define IOH_EP_SSVID_SSID 0
+#define IOH_EP_MSI_OFFSET 0x60
 #define IOH_EP_MSI_SUPPORTED_FLAGS PCI_MSI_FLAGS_MASKBIT
-#define IOH_EP_MSI_NR_VECTOR       2
-#define IOH_EP_EXP_OFFSET          0x90
-#define IOH_EP_AER_OFFSET          0x100
+#define IOH_EP_MSI_NR_VECTOR 2
+#define IOH_EP_EXP_OFFSET 0x90
+#define IOH_EP_AER_OFFSET 0x100
 
 /*
  * If two MSI vector are allocated, Advanced Error Interrupt Message Number
@@ -76,7 +76,10 @@ static int ioh3420_interrupts_init(PCIDevice *d, Error **errp)
     return rc;
 }
 
-static void ioh3420_interrupts_uninit(PCIDevice *d) { msi_uninit(d); }
+static void ioh3420_interrupts_uninit(PCIDevice *d)
+{
+    msi_uninit(d);
+}
 
 static const VMStateDescription vmstate_ioh3420 = {
     .name = "ioh-3240-express-root-port",

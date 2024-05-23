@@ -37,15 +37,15 @@
 
 #define CXL_ROOT_PORT_DID 0x7075
 
-#define CXL_RP_MSI_OFFSET          0x60
+#define CXL_RP_MSI_OFFSET 0x60
 #define CXL_RP_MSI_SUPPORTED_FLAGS PCI_MSI_FLAGS_MASKBIT
-#define CXL_RP_MSI_NR_VECTOR       2
+#define CXL_RP_MSI_NR_VECTOR 2
 
 /* Copied from the gen root port which we derive */
 #define GEN_PCIE_ROOT_PORT_AER_OFFSET 0x100
-#define GEN_PCIE_ROOT_PORT_ACS_OFFSET                                          \
+#define GEN_PCIE_ROOT_PORT_ACS_OFFSET \
     (GEN_PCIE_ROOT_PORT_AER_OFFSET + PCI_ERR_SIZEOF)
-#define CXL_ROOT_PORT_DVSEC_OFFSET                                             \
+#define CXL_ROOT_PORT_DVSEC_OFFSET \
     (GEN_PCIE_ROOT_PORT_ACS_OFFSET + PCI_ACS_SIZEOF)
 
 typedef struct CXLRootPort {
@@ -342,7 +342,10 @@ static int cxl_rp_interrupts_init(PCIDevice *d, Error **errp)
     return rc;
 }
 
-static void cxl_rp_interrupts_uninit(PCIDevice *d) { msi_uninit(d); }
+static void cxl_rp_interrupts_uninit(PCIDevice *d)
+{
+    msi_uninit(d);
+}
 
 static void latch_registers(CXLRootPort *crp)
 {
@@ -642,6 +645,9 @@ static const TypeInfo cxl_root_port_info = {
     .interfaces = (InterfaceInfo[]) { { INTERFACE_CXL_DEVICE }, {} },
 };
 
-static void cxl_register(void) { type_register_static(&cxl_root_port_info); }
+static void cxl_register(void)
+{
+    type_register_static(&cxl_root_port_info);
+}
 
 type_init(cxl_register);

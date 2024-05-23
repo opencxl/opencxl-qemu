@@ -33,7 +33,7 @@
 #include "hw/hotplug.h"
 #include "qom/object.h"
 
-#define TYPE_PCI_BRIDGE_DEV      "pci-bridge"
+#define TYPE_PCI_BRIDGE_DEV "pci-bridge"
 #define TYPE_PCI_BRIDGE_SEAT_DEV "pci-bridge-seat"
 OBJECT_DECLARE_SIMPLE_TYPE(PCIBridgeDev, PCI_BRIDGE_DEV)
 

@@ -23,7 +23,10 @@ uint64_t ntohll(uint64_t netllong)
            ((netllong & 0xFF00000000000000) >> 56);
 }
 
-uint64_t htonll(uint64_t hllong) { return ntohll(hllong); }
+uint64_t htonll(uint64_t hllong)
+{
+    return ntohll(hllong);
+}
 
 void correct_io_hdr(cxl_io_header_t *io_hdr)
 {

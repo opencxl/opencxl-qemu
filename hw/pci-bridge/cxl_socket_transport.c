@@ -21,9 +21,9 @@
 #include <arpa/inet.h>
 #include <stdlib.h>
 
-#define MAX_TAG          512
+#define MAX_TAG 512
 #define MAX_PAYLOAD_SIZE 512
-#define MAX_DURATION     5
+#define MAX_DURATION 5
 
 // For cxl_io_header_t endianness compatibility
 #define EXTRACT_UPPER_2(length) (extract16(length, 8, 2))

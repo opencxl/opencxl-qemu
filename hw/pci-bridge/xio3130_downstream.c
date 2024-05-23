@@ -30,16 +30,16 @@
 #include "qemu/module.h"
 #include "hw/pci-bridge/xio3130_downstream.h"
 
-#define PCI_DEVICE_ID_TI_XIO3130D   0x8233 /* downstream port */
-#define XIO3130_REVISION            0x1
-#define XIO3130_MSI_OFFSET          0x70
+#define PCI_DEVICE_ID_TI_XIO3130D 0x8233 /* downstream port */
+#define XIO3130_REVISION 0x1
+#define XIO3130_MSI_OFFSET 0x70
 #define XIO3130_MSI_SUPPORTED_FLAGS PCI_MSI_FLAGS_64BIT
-#define XIO3130_MSI_NR_VECTOR       1
-#define XIO3130_SSVID_OFFSET        0x80
-#define XIO3130_SSVID_SVID          0
-#define XIO3130_SSVID_SSID          0
-#define XIO3130_EXP_OFFSET          0x90
-#define XIO3130_AER_OFFSET          0x100
+#define XIO3130_MSI_NR_VECTOR 1
+#define XIO3130_SSVID_OFFSET 0x80
+#define XIO3130_SSVID_SVID 0
+#define XIO3130_SSVID_SSID 0
+#define XIO3130_EXP_OFFSET 0x90
+#define XIO3130_AER_OFFSET 0x100
 
 static void xio3130_downstream_write_config(PCIDevice *d, uint32_t address,
                                             uint32_t val, int len)

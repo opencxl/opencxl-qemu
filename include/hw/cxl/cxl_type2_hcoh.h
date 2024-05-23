@@ -30,15 +30,15 @@ typedef enum {
 } MemCommand;
 
 #if (CXL_HCOH_BIAS_PRINT == 1)
-#define CXL_HCOH_BIAS(addr, fmt, args...)                             \
-    do {                                                              \
-        if (1) {                                                      \
-            error_report("[%s:%d] " fmt, __func__, __LINE__, ##args); \
-        }                                                             \
+#define CXL_HCOH_BIAS(addr, fmt, args...)                                      \
+    do {                                                                       \
+        if (1) {                                                               \
+            error_report("[%s:%d] " fmt, __func__, __LINE__, ##args);          \
+        }                                                                      \
     } while (0)
 #else
-#define CXL_HCOH_BIAS(fmt, args...) \
-    do {                            \
+#define CXL_HCOH_BIAS(fmt, args...)                                            \
+    do {                                                                       \
     } while (0)
 #endif
 

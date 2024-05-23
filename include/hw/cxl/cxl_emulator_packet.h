@@ -110,15 +110,16 @@ typedef struct {
     uint8_t attr               : 2;
     uint8_t at                 : 2;
     uint32_t length            : 10;
-} __attribute__((packed)) QEMU_cxl_io_header_t; // QEMU expects these headers in this format
+} __attribute__((packed))
+QEMU_cxl_io_header_t; /* QEMU expects these headers in this format */
 
 typedef struct {
     uint16_t req_id;
     uint8_t tag;
     uint8_t first_dw_be : 4;
     uint8_t last_dw_be  : 4;
-    uint64_t addr_upper : 56; // Adjusted for 62 bits, loops around the dword
-    uint8_t rsvd        : 2; 
+    uint64_t addr_upper : 56; /* Adjusted for 62 bits, loops around the dword */
+    uint8_t rsvd        : 2;
     uint64_t addr_lower : 6;
 } __attribute__((packed)) cxl_io_mreq_header_t;
 
@@ -127,8 +128,8 @@ typedef struct {
     uint8_t tag;
     uint8_t last_dw_be  : 4;
     uint8_t first_dw_be : 4;
-    uint64_t addr       : 62; 
-    uint8_t rsvd        : 2; 
+    uint64_t addr       : 62;
+    uint8_t rsvd        : 2;
 } __attribute__((packed)) QEMU_cxl_io_mreq_header_t;
 
 typedef struct {
@@ -141,29 +142,29 @@ typedef struct {
     system_header_packet_t system_header;
     cxl_io_header_t cxl_io_header;
     cxl_io_mreq_header_t mreq_header;
-    uint64_t data; // TODO: Support dynamic data size
+    uint64_t data; /* TODO: Support dynamic data size */
 } __attribute__((packed)) cxl_io_mem_wr_packet_t;
 
 typedef struct {
     uint16_t req_id;
     uint8_t tag;
     uint8_t first_dw_be : 4;
-    uint8_t last_dw_be  : 4; // endianness compatibility -- swap order
+    uint8_t last_dw_be  : 4; /* endianness compatibility -- swap order */
     uint16_t dest_id;
     uint8_t ext_reg_num : 4;
-    uint8_t rsvd     : 4;
-    uint8_t r        : 2;
-    uint8_t reg_num : 6;
+    uint8_t rsvd        : 4;
+    uint8_t r           : 2;
+    uint8_t reg_num     : 6;
 } __attribute__((packed)) cxl_io_cfg_req_header_t;
 
 typedef struct {
     uint16_t req_id;
     uint8_t tag;
-    uint8_t last_dw_be  : 4; 
+    uint8_t last_dw_be  : 4;
     uint8_t first_dw_be : 4;
     uint16_t dest_id;
     uint8_t rsvd     : 4;
-    uint16_t reg_num  : 10;
+    uint16_t reg_num : 10;
     uint8_t r        : 2;
 } __attribute__((packed)) QEMU_cxl_io_cfg_req_header_t;
 
@@ -183,24 +184,24 @@ typedef struct {
 typedef struct {
     uint16_t cpl_id;
     uint8_t byte_count_upper : 4;
-    uint8_t bcm         : 1;
-    uint8_t status      : 3; // Python class was changed to reflect 3 bits
+    uint8_t bcm              : 1;
+    uint8_t status : 3; /* Python class was changed to reflect 3 bits */
     uint8_t byte_count_lower;
     uint16_t req_id;
     uint8_t tag;
-    uint8_t lower_addr  : 7;
-    uint8_t rsvd        : 1;
+    uint8_t lower_addr : 7;
+    uint8_t rsvd       : 1;
 } __attribute__((packed)) cxl_io_completion_header_t;
 
 typedef struct {
     uint16_t cpl_id;
     uint8_t status      : 3;
     uint8_t bcm         : 1;
-    uint16_t byte_count  : 12;
+    uint16_t byte_count : 12;
     uint16_t req_id;
     uint8_t tag;
-    uint8_t rsvd        : 1;
-    uint8_t lower_addr  : 7;
+    uint8_t rsvd       : 1;
+    uint8_t lower_addr : 7;
 } __attribute__((packed)) QEMU_cxl_io_completion_header_t;
 
 typedef struct {
@@ -213,7 +214,7 @@ typedef struct {
     system_header_packet_t system_header;
     cxl_io_header_t cxl_io_header;
     cxl_io_completion_header_t cpl_header;
-    uint64_t data; // TODO: Support dynamic data size
+    uint64_t data; /* TODO: Support dynamic data size */
 } __attribute__((packed)) cxl_io_completion_data_packet_t;
 
 //

@@ -173,9 +173,6 @@ static const TypeInfo cxl_dsp_info = {
     .interfaces = (InterfaceInfo[]) { { INTERFACE_PCIE_DEVICE }, {} },
 };
 
-static void cxl_dsp_register_type(void)
-{
-    type_register_static(&cxl_dsp_info);
-}
+static void cxl_dsp_register_type(void) { type_register_static(&cxl_dsp_info); }
 
 type_init(cxl_dsp_register_type);

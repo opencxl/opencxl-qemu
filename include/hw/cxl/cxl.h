@@ -21,39 +21,39 @@
 #include "cxl_device.h"
 
 #define CXL_COMPONENT_REG_BAR_IDX 0
-#define CXL_DEVICE_REG_BAR_IDX 2
+#define CXL_DEVICE_REG_BAR_IDX    2
 
 #define CXL_WINDOW_MAX 10
 
 typedef struct CXLHost CXLHost;
 #define CXL_BOOT_WAIT_TIME 30000000
-#define CXL_THREAD_DELAY 20
+#define CXL_THREAD_DELAY   20
 
-#define CXL_DUMP_CACHE 0
-#define CXL_DEBUG_PRINT 0
-#define CXL_THREAD_PRINT 0
+#define CXL_DUMP_CACHE      0
+#define CXL_DEBUG_PRINT     0
+#define CXL_THREAD_PRINT    0
 #define CXL_HCOH_BIAS_PRINT 0
 #define CXL_DCOH_BIAS_PRINT 0
 
 #if (CXL_DEBUG_PRINT == 1)
-#define CXL_DEBUG(fmt, args...)                                   \
-    do {                                                          \
-        error_report("[%s:%d] " fmt, __func__, __LINE__, ##args); \
+#define CXL_DEBUG(fmt, args...)                                                \
+    do {                                                                       \
+        error_report("[%s:%d] " fmt, __func__, __LINE__, ##args);              \
     } while (0)
 #else
-#define CXL_DEBUG(fmt, args...) \
-    do {                        \
+#define CXL_DEBUG(fmt, args...)                                                \
+    do {                                                                       \
     } while (0)
 #endif
 
 #if (CXL_THREAD_PRINT == 1)
-#define CXL_THREAD(fmt, args...)                                  \
-    do {                                                          \
-        error_report("[%s:%d] " fmt, __func__, __LINE__, ##args); \
+#define CXL_THREAD(fmt, args...)                                               \
+    do {                                                                       \
+        error_report("[%s:%d] " fmt, __func__, __LINE__, ##args);              \
     } while (0)
 #else
-#define CXL_THREAD(fmt, args...) \
-    do {                         \
+#define CXL_THREAD(fmt, args...)                                               \
+    do {                                                                       \
     } while (0)
 #endif
 
@@ -68,8 +68,7 @@ typedef struct PXBDev {
     uint16_t numa_node;
     bool bypass_iommu;
     bool hdm_for_passthrough;
-    struct cxl_dev
-    {
+    struct cxl_dev {
         CXLHost *cxl_host_bridge; /* Pointer to a CXLHost */
     } cxl;
 } PXBDev;

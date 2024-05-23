@@ -175,9 +175,6 @@ static const TypeInfo cxl_usp_info = {
                                       {} },
 };
 
-static void cxl_usp_register_type(void)
-{
-    type_register_static(&cxl_usp_info);
-}
+static void cxl_usp_register_type(void) { type_register_static(&cxl_usp_info); }
 
 type_init(cxl_usp_register_type);

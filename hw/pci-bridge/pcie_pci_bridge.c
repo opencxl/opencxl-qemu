@@ -81,8 +81,9 @@ static void pcie_pci_bridge_realize(PCIDevice *d, Error **errp)
             }
         }
     }
-    pci_register_bar(d, 0, PCI_BASE_ADDRESS_SPACE_MEMORY |
-                     PCI_BASE_ADDRESS_MEM_TYPE_64, &pcie_br->shpc_bar);
+    pci_register_bar(
+        d, 0, PCI_BASE_ADDRESS_SPACE_MEMORY | PCI_BASE_ADDRESS_MEM_TYPE_64,
+        &pcie_br->shpc_bar);
     return;
 
 msi_error:
@@ -114,8 +115,8 @@ static void pcie_pci_bridge_reset(DeviceState *qdev)
     shpc_reset(d);
 }
 
-static void pcie_pci_bridge_write_config(PCIDevice *d,
-        uint32_t address, uint32_t val, int len)
+static void pcie_pci_bridge_write_config(PCIDevice *d, uint32_t address,
+                                         uint32_t val, int len)
 {
     pci_bridge_write_config(d, address, val, len);
     if (msi_present(d)) {
@@ -125,18 +126,16 @@ static void pcie_pci_bridge_write_config(PCIDevice *d,
 }
 
 static Property pcie_pci_bridge_dev_properties[] = {
-        DEFINE_PROP_ON_OFF_AUTO("msi", PCIEPCIBridge, msi, ON_OFF_AUTO_AUTO),
-        DEFINE_PROP_END_OF_LIST(),
+    DEFINE_PROP_ON_OFF_AUTO("msi", PCIEPCIBridge, msi, ON_OFF_AUTO_AUTO),
+    DEFINE_PROP_END_OF_LIST(),
 };
 
 static const VMStateDescription pcie_pci_bridge_dev_vmstate = {
-        .name = TYPE_PCIE_PCI_BRIDGE_DEV,
-        .priority = MIG_PRI_PCI_BUS,
-        .fields = (VMStateField[]) {
-            VMSTATE_PCI_DEVICE(parent_obj, PCIBridge),
-            SHPC_VMSTATE(shpc, PCIDevice, NULL),
-            VMSTATE_END_OF_LIST()
-        }
+    .name = TYPE_PCIE_PCI_BRIDGE_DEV,
+    .priority = MIG_PRI_PCI_BUS,
+    .fields = (VMStateField[]) { VMSTATE_PCI_DEVICE(parent_obj, PCIBridge),
+                                 SHPC_VMSTATE(shpc, PCIDevice, NULL),
+                                 VMSTATE_END_OF_LIST() }
 };
 
 static void pcie_pci_bridge_class_init(ObjectClass *klass, void *data)
@@ -159,17 +158,17 @@ static void pcie_pci_bridge_class_init(ObjectClass *klass, void *data)
     hc->unplug_request = pci_bridge_dev_unplug_request_cb;
 }
 
-static const TypeInfo pcie_pci_bridge_info = {
-        .name = TYPE_PCIE_PCI_BRIDGE_DEV,
-        .parent = TYPE_PCI_BRIDGE,
-        .instance_size = sizeof(PCIEPCIBridge),
-        .class_init = pcie_pci_bridge_class_init,
-        .interfaces = (InterfaceInfo[]) {
-            { TYPE_HOTPLUG_HANDLER },
-            { INTERFACE_PCIE_DEVICE },
-            { },
-        }
-};
+static const TypeInfo pcie_pci_bridge_info = { .name = TYPE_PCIE_PCI_BRIDGE_DEV,
+                                               .parent = TYPE_PCI_BRIDGE,
+                                               .instance_size =
+                                                   sizeof(PCIEPCIBridge),
+                                               .class_init =
+                                                   pcie_pci_bridge_class_init,
+                                               .interfaces = (InterfaceInfo[]) {
+                                                   { TYPE_HOTPLUG_HANDLER },
+                                                   { INTERFACE_PCIE_DEVICE },
+                                                   {},
+                                               } };
 
 static void pciepci_register(void)
 {

@@ -10,24 +10,23 @@
 #ifndef CXL_PCI_H
 #define CXL_PCI_H
 
-
 #define CXL_VENDOR_ID 0x1e98
 
 #define PCIE_DVSEC_HEADER1_OFFSET 0x4 /* Offset from start of extend cap */
-#define PCIE_DVSEC_ID_OFFSET 0x8
+#define PCIE_DVSEC_ID_OFFSET      0x8
 
 #define PCIE_CXL_DEVICE_DVSEC_LENGTH 0x38
 #define PCIE_CXL1_DEVICE_DVSEC_REVID 0
 #define PCIE_CXL2_DEVICE_DVSEC_REVID 1
 
 #define EXTENSIONS_PORT_DVSEC_LENGTH 0x28
-#define EXTENSIONS_PORT_DVSEC_REVID 0
+#define EXTENSIONS_PORT_DVSEC_REVID  0
 
 #define GPF_PORT_DVSEC_LENGTH 0x10
 #define GPF_PORT_DVSEC_REVID  0
 
 #define GPF_DEVICE_DVSEC_LENGTH 0x10
-#define GPF_DEVICE_DVSEC_REVID 0
+#define GPF_DEVICE_DVSEC_REVID  0
 
 #define PCIE_FLEXBUS_PORT_DVSEC_LENGTH_2_0 0x14
 #define PCIE_FLEXBUS_PORT_DVSEC_REVID_2_0  1
@@ -36,14 +35,14 @@
 #define REG_LOC_DVSEC_REVID  0
 
 enum {
-    PCIE_CXL_DEVICE_DVSEC      = 0,
+    PCIE_CXL_DEVICE_DVSEC = 0,
     NON_CXL_FUNCTION_MAP_DVSEC = 2,
-    EXTENSIONS_PORT_DVSEC      = 3,
-    GPF_PORT_DVSEC             = 4,
-    GPF_DEVICE_DVSEC           = 5,
-    PCIE_FLEXBUS_PORT_DVSEC    = 7,
-    REG_LOC_DVSEC              = 8,
-    MLD_DVSEC                  = 9,
+    EXTENSIONS_PORT_DVSEC = 3,
+    GPF_PORT_DVSEC = 4,
+    GPF_DEVICE_DVSEC = 5,
+    PCIE_FLEXBUS_PORT_DVSEC = 7,
+    REG_LOC_DVSEC = 8,
+    MLD_DVSEC = 9,
     CXL20_MAX_DVSEC
 };
 
@@ -103,9 +102,9 @@ typedef struct CXLDVSECPortExtensions {
 } CXLDVSECPortExtensions;
 QEMU_BUILD_BUG_ON(sizeof(CXLDVSECPortExtensions) != 0x28);
 
-#define PORT_CONTROL_OFFSET          0xc
-#define PORT_CONTROL_UNMASK_SBR      1
-#define PORT_CONTROL_ALT_MEMID_EN    4
+#define PORT_CONTROL_OFFSET       0xc
+#define PORT_CONTROL_UNMASK_SBR   1
+#define PORT_CONTROL_ALT_MEMID_EN 4
 
 /* CXL 2.0 - 8.1.6 GPF DVSEC (ID 0004) */
 typedef struct CXLDVSECPortGPF {

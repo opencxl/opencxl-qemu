@@ -314,7 +314,7 @@ bool send_cxl_io_mem_read(int socket_fd, hwaddr hpa, int size, uint16_t *tag)
 
     packet.cxl_io_header.fmt_type = MRD_64B;
     uint16_t hdr_length = round_up_to_nearest_dword(size);
-    // hdr_length = htons(hdr_length);
+
     packet.cxl_io_header.length_upper = EXTRACT_UPPER_2(hdr_length);
     packet.cxl_io_header.length_lower = EXTRACT_LOWER_8(hdr_length);
 
@@ -324,8 +324,8 @@ bool send_cxl_io_mem_read(int socket_fd, hwaddr hpa, int size, uint16_t *tag)
     hpa = htonll(hpa);
 
     packet.mreq_header.addr_upper =
-        (hpa >> 8) & 0xFFFFFFFFFFFFFF; // endianness compatibility
-    packet.mreq_header.addr_lower = (hpa & 0xFF) >> 2; // ditto
+        (hpa >> 8) & 0xFFFFFFFFFFFFFF; 
+    packet.mreq_header.addr_lower = (hpa & 0xFF) >> 2; 
 
     trace_cxl_socket_debug_num("MRD_64B Packet Size", sizeof(packet));
 
@@ -363,8 +363,8 @@ bool send_cxl_io_mem_write(int socket_fd, hwaddr hpa, uint64_t val, int size,
     hpa = htonll(hpa);
 
     packet.mreq_header.addr_upper =
-        (hpa >> 8) & 0xFFFFFFFFFFFFFF; // endianness compatibility
-    packet.mreq_header.addr_lower = (hpa & 0xFF) >> 2; // ditto
+        (hpa >> 8) & 0xFFFFFFFFFFFFFF; 
+    packet.mreq_header.addr_lower = (hpa & 0xFF) >> 2; 
 
     packet.data = val;
 
@@ -416,7 +416,6 @@ bool send_cxl_io_config_space_read(int socket_fd, uint16_t bdf, uint32_t offset,
 
     const uint8_t bus = bdf >> 8;
     const uint8_t device = (bdf & 0x1F) >> 3;
-    // const uint8_t device = (bdf >> 3) & 0x1F;
     const uint8_t function = bdf & 0x7;
 
     trace_cxl_socket_cxl_io_config_space_read(bus, device, function, offset,
@@ -428,6 +427,7 @@ bool send_cxl_io_config_space_read(int socket_fd, uint16_t bdf, uint32_t offset,
     packet.system_header.payload_length = sizeof(packet);
 
     packet.cxl_io_header.length_lower = 1;
+    packet.cxl_io_header.length_upper = 0;
     packet.cxl_io_header.fmt_type = type0 ? CFG_RD0 : CFG_RD1;
 
     fill_cxl_io_cfg_req_packet(&packet.cfg_req_header, bdf, offset, size, 0,
@@ -452,7 +452,6 @@ bool send_cxl_io_config_space_write(int socket_fd, uint16_t bdf,
 
     const uint8_t bus = bdf >> 8;
     const uint8_t device = (bdf & 0x1F) >> 3;
-    // const uint8_t device = (bdf >> 3) & 0x1F;
     const uint8_t function = bdf & 0x7;
     trace_cxl_socket_cxl_io_config_space_write(bus, device, function, offset,
                                                size, val);
@@ -463,6 +462,7 @@ bool send_cxl_io_config_space_write(int socket_fd, uint16_t bdf,
     packet.system_header.payload_length = sizeof(packet);
 
     packet.cxl_io_header.length_lower = 1;
+    packet.cxl_io_header.length_upper = 0;
     packet.cxl_io_header.fmt_type = type0 ? CFG_WR0 : CFG_WR1;
 
     fill_cxl_io_cfg_req_packet(&packet.cfg_req_header, bdf, offset, size, 0,

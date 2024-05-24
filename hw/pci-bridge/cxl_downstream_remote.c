@@ -149,6 +149,7 @@ static void cxl_dsp_realize(PCIDevice *pci_dev, Error **errp)
 
 static void cxl_dsp_exit(PCIDevice *d)
 {
+    return;
 }
 
 static void cxl_dsp_class_init(ObjectClass *oc, void *data)

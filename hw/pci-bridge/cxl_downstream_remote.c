@@ -115,7 +115,10 @@ static void cxl_dsp_config_write(PCIDevice *pci_dev, uint32_t addr,
     trace_cxl_dsp_debug_message("Received Config Space Write Completion");
 }
 
-static void cxl_dsp_reset(DeviceState *qdev) { }
+static void cxl_dsp_reset(DeviceState *qdev)
+{
+    return;
+}
 
 static void cxl_dsp_realize(PCIDevice *pci_dev, Error **errp)
 {
@@ -144,7 +147,10 @@ static void cxl_dsp_realize(PCIDevice *pci_dev, Error **errp)
     return;
 }
 
-static void cxl_dsp_exit(PCIDevice *d) { }
+static void cxl_dsp_exit(PCIDevice *d)
+{
+    return;
+}
 
 static void cxl_dsp_class_init(ObjectClass *oc, void *data)
 {

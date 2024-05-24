@@ -114,7 +114,10 @@ static void cxl_usp_write_config(PCIDevice *pci_dev, uint32_t addr,
     trace_cxl_usp_debug_message("Sending Config Space Write Completion");
 }
 
-static void cxl_usp_reset(DeviceState *qdev) { }
+static void cxl_usp_reset(DeviceState *qdev)
+{
+    return;
+}
 
 static void cxl_usp_realize(PCIDevice *pci_dev, Error **errp)
 {
@@ -143,7 +146,10 @@ static void cxl_usp_realize(PCIDevice *pci_dev, Error **errp)
     return;
 }
 
-static void cxl_usp_exit(PCIDevice *d) { }
+static void cxl_usp_exit(PCIDevice *d)
+{
+    return;
+}
 
 static void cxl_upstream_class_init(ObjectClass *oc, void *data)
 {

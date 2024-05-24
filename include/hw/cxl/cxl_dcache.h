@@ -34,12 +34,12 @@
  */
 
 #define DEVICE_BLKSIZE_BIT (6)
-#define DEVICE_BLKSIZE     (1 << DEVICE_BLKSIZE_BIT) // fixed 64B aligned
-#define DEVICE_ASSOC_BIT   (2)
-#define DEVICE_ASSOC       (1 << DEVICE_ASSOC_BIT) // # of association (cache columns)
-#define DEVICE_SET_BIT     (3)
-#define DEVICE_SET         (1 << DEVICE_SET_BIT) // # of set (cache rows)
-#define DEVICE_CACHESIZE   (DEVICE_BLKSIZE * DEVICE_ASSOC * DEVICE_SET)
+#define DEVICE_BLKSIZE (1 << DEVICE_BLKSIZE_BIT) // fixed 64B aligned
+#define DEVICE_ASSOC_BIT (2)
+#define DEVICE_ASSOC (1 << DEVICE_ASSOC_BIT) // # of association (cache columns)
+#define DEVICE_SET_BIT (3)
+#define DEVICE_SET (1 << DEVICE_SET_BIT) // # of set (cache rows)
+#define DEVICE_CACHESIZE (DEVICE_BLKSIZE * DEVICE_ASSOC * DEVICE_SET)
 
 typedef enum {
     CACHE_MISS = 0,

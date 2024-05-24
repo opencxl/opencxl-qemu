@@ -46,8 +46,8 @@ static void cxl_usp_dvsec_write_config(PCIDevice *dev, uint32_t addr,
     }
 }
 
-static void cxl_usp_write_config(PCIDevice *d, uint32_t address,
-                                 uint32_t val, int len)
+static void cxl_usp_write_config(PCIDevice *d, uint32_t address, uint32_t val,
+                                 int len)
 {
     CXLUpstreamPort *usp = CXL_USP(d);
 
@@ -95,32 +95,29 @@ static void build_dvsecs(CXLComponentState *cxl)
 {
     uint8_t *dvsec;
 
-    dvsec = (uint8_t *)&(CXLDVSECPortExtensions){
+    dvsec = (uint8_t *)&(CXLDVSECPortExtensions) {
         .status = 0x1, /* Port Power Management Init Complete */
     };
-    cxl_component_create_dvsec(cxl, CXL2_UPSTREAM_PORT,
-                               EXTENSIONS_PORT_DVSEC_LENGTH,
-                               EXTENSIONS_PORT_DVSEC,
-                               EXTENSIONS_PORT_DVSEC_REVID, dvsec);
-    dvsec = (uint8_t *)&(CXLDVSECPortFlexBus){
-        .cap                     = 0x27, /* Cache, IO, Mem, non-MLD */
-        .ctrl                    = 0x27, /* Cache, IO, Mem */
-        .status                  = 0x26, /* same */
+    cxl_component_create_dvsec(
+        cxl, CXL2_UPSTREAM_PORT, EXTENSIONS_PORT_DVSEC_LENGTH,
+        EXTENSIONS_PORT_DVSEC, EXTENSIONS_PORT_DVSEC_REVID, dvsec);
+    dvsec = (uint8_t *)&(CXLDVSECPortFlexBus) {
+        .cap = 0x27, /* Cache, IO, Mem, non-MLD */
+        .ctrl = 0x27, /* Cache, IO, Mem */
+        .status = 0x26, /* same */
         .rcvd_mod_ts_data_phase1 = 0xef, /* WTF? */
     };
-    cxl_component_create_dvsec(cxl, CXL2_UPSTREAM_PORT,
-                               PCIE_FLEXBUS_PORT_DVSEC_LENGTH_2_0,
-                               PCIE_FLEXBUS_PORT_DVSEC,
-                               PCIE_FLEXBUS_PORT_DVSEC_REVID_2_0, dvsec);
+    cxl_component_create_dvsec(
+        cxl, CXL2_UPSTREAM_PORT, PCIE_FLEXBUS_PORT_DVSEC_LENGTH_2_0,
+        PCIE_FLEXBUS_PORT_DVSEC, PCIE_FLEXBUS_PORT_DVSEC_REVID_2_0, dvsec);
 
-    dvsec = (uint8_t *)&(CXLDVSECRegisterLocator){
-        .rsvd         = 0,
+    dvsec = (uint8_t *)&(CXLDVSECRegisterLocator) {
+        .rsvd = 0,
         .reg0_base_lo = RBI_COMPONENT_REG | CXL_COMPONENT_REG_BAR_IDX,
         .reg0_base_hi = 0,
     };
-    cxl_component_create_dvsec(cxl, CXL2_UPSTREAM_PORT,
-                               REG_LOC_DVSEC_LENGTH, REG_LOC_DVSEC,
-                               REG_LOC_DVSEC_REVID, dvsec);
+    cxl_component_create_dvsec(cxl, CXL2_UPSTREAM_PORT, REG_LOC_DVSEC_LENGTH,
+                               REG_LOC_DVSEC, REG_LOC_DVSEC_REVID, dvsec);
 }
 
 static bool cxl_doe_cdat_rsp(DOECap *doe_cap)
@@ -159,7 +156,7 @@ static bool cxl_doe_cdat_rsp(DOECap *doe_cap)
     };
 
     memcpy(doe_cap->read_mbox, &rsp, sizeof(rsp));
-        memcpy(doe_cap->read_mbox + DIV_ROUND_UP(sizeof(rsp), sizeof(uint32_t)),
+    memcpy(doe_cap->read_mbox + DIV_ROUND_UP(sizeof(rsp), sizeof(uint32_t)),
            base, len);
 
     doe_cap->read_mbox_len += rsp.header.length;
@@ -168,8 +165,7 @@ static bool cxl_doe_cdat_rsp(DOECap *doe_cap)
 }
 
 static DOEProtocol doe_cdat_prot[] = {
-    { CXL_VENDOR_ID, CXL_DOE_TABLE_ACCESS, cxl_doe_cdat_rsp },
-    { }
+    { CXL_VENDOR_ID, CXL_DOE_TABLE_ACCESS, cxl_doe_cdat_rsp }, {}
 };
 
 enum {
@@ -323,7 +319,7 @@ static void cxl_usp_realize(PCIDevice *d, Error **errp)
     cxl_component_register_block_init(OBJECT(d), cxl_cstate, TYPE_CXL_USP);
     pci_register_bar(d, CXL_COMPONENT_REG_BAR_IDX,
                      PCI_BASE_ADDRESS_SPACE_MEMORY |
-                     PCI_BASE_ADDRESS_MEM_TYPE_64,
+                         PCI_BASE_ADDRESS_MEM_TYPE_64,
                      component_bar);
 
     pcie_doe_init(d, &usp->doe_cdat, cxl_cstate->dvsec_offset, doe_cdat_prot,
@@ -380,11 +376,9 @@ static const TypeInfo cxl_usp_info = {
     .parent = TYPE_PCIE_PORT,
     .instance_size = sizeof(CXLUpstreamPort),
     .class_init = cxl_upstream_class_init,
-    .interfaces = (InterfaceInfo[]) {
-        { INTERFACE_PCIE_DEVICE },
-        { INTERFACE_CXL_DEVICE },
-        { }
-    },
+    .interfaces = (InterfaceInfo[]) { { INTERFACE_PCIE_DEVICE },
+                                      { INTERFACE_CXL_DEVICE },
+                                      {} },
 };
 
 static void cxl_usp_register_type(void)

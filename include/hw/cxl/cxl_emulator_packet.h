@@ -176,7 +176,9 @@ typedef struct {
 // CXL.mem
 //
 
+#define CXL_RW_NUM_BUFFERS 2
 #define CXL_MEM_ACCESS_UNIT 64
+#define CXL_MEM_ACCESS_OFFSET_MASK (CXL_MEM_ACCESS_UNIT - 1)
 
 typedef enum cxl_mem_channel {
     M2S_REQ = 1,

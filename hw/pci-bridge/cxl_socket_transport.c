@@ -29,6 +29,13 @@
 #define EXTRACT_UPPER_2(length) (extract16(length, 8, 2))
 #define EXTRACT_LOWER_8(length) (extract16(length, 0, 8))
 
+// For mreq_header_t endianness compatibility
+#define EXTRACT_UPPER_56(address) (extract64(address, 2, 56))
+#define EXTRACT_LOWER_6(address) (extract64(address, 58, 6))
+
+// For cfg_req_header_t endianness compatibility
+#define EXTRACT_EXTENSION_4(reg) (extract16(reg, 6, 4))
+
 typedef struct packet_table_entry {
     uint8_t packet[MAX_PAYLOAD_SIZE];
     size_t packet_size;
@@ -401,9 +408,11 @@ static bool fill_cxl_io_cfg_req_packet(cxl_io_cfg_req_header_t *header,
     header->tag = tag;
     header->first_dw_be = first_dw_be;
     header->last_dw_be = 0;
+  
     header->dest_id = htons(id);
     header->ext_reg_num = (cfg_addr >> 8) & 0xF;
     header->reg_num = (cfg_addr >> 2) & 0x3F;
+  
     return true;
 }
 

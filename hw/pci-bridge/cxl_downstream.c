@@ -217,11 +217,9 @@ static const TypeInfo cxl_dsp_info = {
     .instance_size = sizeof(CXLDownstreamPort),
     .parent = TYPE_PCIE_SLOT,
     .class_init = cxl_dsp_class_init,
-    .interfaces = (InterfaceInfo[]) {
-        { INTERFACE_PCIE_DEVICE },
-        { INTERFACE_CXL_DEVICE },
-        { }
-    },
+    .interfaces = (InterfaceInfo[]) { { INTERFACE_PCIE_DEVICE },
+                                      { INTERFACE_CXL_DEVICE },
+                                      {} },
 };
 
 static void cxl_dsp_register_type(void)

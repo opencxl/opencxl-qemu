@@ -80,8 +80,8 @@
     (CXL_MAILBOX_REGISTERS_OFFSET + CXL_MAILBOX_REGISTERS_LENGTH)
 #define CXL_MEMORY_DEVICE_REGISTERS_LENGTH 0x8
 
-#define CXL_MMIO_SIZE                                                   \
-    (CXL_DEVICE_CAP_REG_SIZE + CXL_DEVICE_STATUS_REGISTERS_LENGTH +     \
+#define CXL_MMIO_SIZE                                               \
+    (CXL_DEVICE_CAP_REG_SIZE + CXL_DEVICE_STATUS_REGISTERS_LENGTH + \
      CXL_MAILBOX_REGISTERS_LENGTH + CXL_MEMORY_DEVICE_REGISTERS_LENGTH)
 
 typedef struct cxl_device_state {
@@ -136,10 +136,11 @@ void cxl_device_register_init_common(CXLDeviceState *dev);
  * Documented as a 128 bit register, but 64 bit accesses and the second
  * 64 bits are currently reserved.
  */
-REG64(CXL_DEV_CAP_ARRAY, 0) /* Documented as 128 bit register but 64 byte accesses */
-    FIELD(CXL_DEV_CAP_ARRAY, CAP_ID, 0, 16)
-    FIELD(CXL_DEV_CAP_ARRAY, CAP_VERSION, 16, 8)
-    FIELD(CXL_DEV_CAP_ARRAY, CAP_COUNT, 32, 16)
+REG64(CXL_DEV_CAP_ARRAY,
+      0) /* Documented as 128 bit register but 64 byte accesses */
+FIELD(CXL_DEV_CAP_ARRAY, CAP_ID, 0, 16)
+FIELD(CXL_DEV_CAP_ARRAY, CAP_VERSION, 16, 8)
+FIELD(CXL_DEV_CAP_ARRAY, CAP_COUNT, 32, 16)
 
 /*
  * Helper macro to initialize capability headers for CXL devices.
@@ -156,18 +157,18 @@ REG64(CXL_DEV_CAP_ARRAY, 0) /* Documented as 128 bit register but 64 byte access
  * Here we've chosen to make it 4 dwords. The spec allows any pow2 multiple
  * access to be used for a register up to 64 bits.
  */
-#define CXL_DEVICE_CAPABILITY_HEADER_REGISTER(n, offset)  \
-    REG32(CXL_DEV_##n##_CAP_HDR0, offset)                 \
-        FIELD(CXL_DEV_##n##_CAP_HDR0, CAP_ID, 0, 16)      \
-        FIELD(CXL_DEV_##n##_CAP_HDR0, CAP_VERSION, 16, 8) \
-    REG32(CXL_DEV_##n##_CAP_HDR1, offset + 4)             \
-        FIELD(CXL_DEV_##n##_CAP_HDR1, CAP_OFFSET, 0, 32)  \
-    REG32(CXL_DEV_##n##_CAP_HDR2, offset + 8)             \
-        FIELD(CXL_DEV_##n##_CAP_HDR2, CAP_LENGTH, 0, 32)
+#define CXL_DEVICE_CAPABILITY_HEADER_REGISTER(n, offset) \
+    REG32(CXL_DEV_##n##_CAP_HDR0, offset)                \
+    FIELD(CXL_DEV_##n##_CAP_HDR0, CAP_ID, 0, 16)         \
+    FIELD(CXL_DEV_##n##_CAP_HDR0, CAP_VERSION, 16, 8)    \
+    REG32(CXL_DEV_##n##_CAP_HDR1, offset + 4)            \
+    FIELD(CXL_DEV_##n##_CAP_HDR1, CAP_OFFSET, 0, 32)     \
+    REG32(CXL_DEV_##n##_CAP_HDR2, offset + 8)            \
+    FIELD(CXL_DEV_##n##_CAP_HDR2, CAP_LENGTH, 0, 32)
 
 CXL_DEVICE_CAPABILITY_HEADER_REGISTER(DEVICE_STATUS, CXL_DEVICE_CAP_HDR1_OFFSET)
 CXL_DEVICE_CAPABILITY_HEADER_REGISTER(MAILBOX, CXL_DEVICE_CAP_HDR1_OFFSET +
-                                               CXL_DEVICE_CAP_REG_SIZE)
+                                                   CXL_DEVICE_CAP_REG_SIZE)
 CXL_DEVICE_CAPABILITY_HEADER_REGISTER(MEMORY_DEVICE,
                                       CXL_DEVICE_CAP_HDR1_OFFSET +
                                           CXL_DEVICE_CAP_REG_SIZE * 2)
@@ -175,64 +176,63 @@ CXL_DEVICE_CAPABILITY_HEADER_REGISTER(MEMORY_DEVICE,
 void cxl_initialize_mailbox(CXLDeviceState *cxl_dstate);
 void cxl_process_mailbox(CXLDeviceState *cxl_dstate);
 
-#define cxl_device_cap_init(dstate, reg, cap_id)                           \
-    do {                                                                   \
-        uint32_t *cap_hdrs = dstate->caps_reg_state32;                     \
-        int which = R_CXL_DEV_##reg##_CAP_HDR0;                            \
-        cap_hdrs[which] =                                                  \
-            FIELD_DP32(cap_hdrs[which], CXL_DEV_##reg##_CAP_HDR0,          \
-                       CAP_ID, cap_id);                                    \
-        cap_hdrs[which] = FIELD_DP32(                                      \
-            cap_hdrs[which], CXL_DEV_##reg##_CAP_HDR0, CAP_VERSION, 1);    \
-        cap_hdrs[which + 1] =                                              \
-            FIELD_DP32(cap_hdrs[which + 1], CXL_DEV_##reg##_CAP_HDR1,      \
-                       CAP_OFFSET, CXL_##reg##_REGISTERS_OFFSET);          \
-        cap_hdrs[which + 2] =                                              \
-            FIELD_DP32(cap_hdrs[which + 2], CXL_DEV_##reg##_CAP_HDR2,      \
-                       CAP_LENGTH, CXL_##reg##_REGISTERS_LENGTH);          \
+#define cxl_device_cap_init(dstate, reg, cap_id)                        \
+    do {                                                                \
+        uint32_t *cap_hdrs = dstate->caps_reg_state32;                  \
+        int which = R_CXL_DEV_##reg##_CAP_HDR0;                         \
+        cap_hdrs[which] = FIELD_DP32(                                   \
+            cap_hdrs[which], CXL_DEV_##reg##_CAP_HDR0, CAP_ID, cap_id); \
+        cap_hdrs[which] = FIELD_DP32(                                   \
+            cap_hdrs[which], CXL_DEV_##reg##_CAP_HDR0, CAP_VERSION, 1); \
+        cap_hdrs[which + 1] =                                           \
+            FIELD_DP32(cap_hdrs[which + 1], CXL_DEV_##reg##_CAP_HDR1,   \
+                       CAP_OFFSET, CXL_##reg##_REGISTERS_OFFSET);       \
+        cap_hdrs[which + 2] =                                           \
+            FIELD_DP32(cap_hdrs[which + 2], CXL_DEV_##reg##_CAP_HDR2,   \
+                       CAP_LENGTH, CXL_##reg##_REGISTERS_LENGTH);       \
     } while (0)
 
 /* CXL 2.0 8.2.8.4.3 Mailbox Capabilities Register */
 REG32(CXL_DEV_MAILBOX_CAP, 0)
-    FIELD(CXL_DEV_MAILBOX_CAP, PAYLOAD_SIZE, 0, 5)
-    FIELD(CXL_DEV_MAILBOX_CAP, INT_CAP, 5, 1)
-    FIELD(CXL_DEV_MAILBOX_CAP, BG_INT_CAP, 6, 1)
-    FIELD(CXL_DEV_MAILBOX_CAP, MSI_N, 7, 4)
+FIELD(CXL_DEV_MAILBOX_CAP, PAYLOAD_SIZE, 0, 5)
+FIELD(CXL_DEV_MAILBOX_CAP, INT_CAP, 5, 1)
+FIELD(CXL_DEV_MAILBOX_CAP, BG_INT_CAP, 6, 1)
+FIELD(CXL_DEV_MAILBOX_CAP, MSI_N, 7, 4)
 
 /* CXL 2.0 8.2.8.4.4 Mailbox Control Register */
 REG32(CXL_DEV_MAILBOX_CTRL, 4)
-    FIELD(CXL_DEV_MAILBOX_CTRL, DOORBELL, 0, 1)
-    FIELD(CXL_DEV_MAILBOX_CTRL, INT_EN, 1, 1)
-    FIELD(CXL_DEV_MAILBOX_CTRL, BG_INT_EN, 2, 1)
+FIELD(CXL_DEV_MAILBOX_CTRL, DOORBELL, 0, 1)
+FIELD(CXL_DEV_MAILBOX_CTRL, INT_EN, 1, 1)
+FIELD(CXL_DEV_MAILBOX_CTRL, BG_INT_EN, 2, 1)
 
 /* CXL 2.0 8.2.8.4.5 Command Register */
 REG64(CXL_DEV_MAILBOX_CMD, 8)
-    FIELD(CXL_DEV_MAILBOX_CMD, COMMAND, 0, 8)
-    FIELD(CXL_DEV_MAILBOX_CMD, COMMAND_SET, 8, 8)
-    FIELD(CXL_DEV_MAILBOX_CMD, LENGTH, 16, 20)
+FIELD(CXL_DEV_MAILBOX_CMD, COMMAND, 0, 8)
+FIELD(CXL_DEV_MAILBOX_CMD, COMMAND_SET, 8, 8)
+FIELD(CXL_DEV_MAILBOX_CMD, LENGTH, 16, 20)
 
 /* CXL 2.0 8.2.8.4.6 Mailbox Status Register */
 REG64(CXL_DEV_MAILBOX_STS, 0x10)
-    FIELD(CXL_DEV_MAILBOX_STS, BG_OP, 0, 1)
-    FIELD(CXL_DEV_MAILBOX_STS, ERRNO, 32, 16)
-    FIELD(CXL_DEV_MAILBOX_STS, VENDOR_ERRNO, 48, 16)
+FIELD(CXL_DEV_MAILBOX_STS, BG_OP, 0, 1)
+FIELD(CXL_DEV_MAILBOX_STS, ERRNO, 32, 16)
+FIELD(CXL_DEV_MAILBOX_STS, VENDOR_ERRNO, 48, 16)
 
 /* CXL 2.0 8.2.8.4.7 Background Command Status Register */
 REG64(CXL_DEV_BG_CMD_STS, 0x18)
-    FIELD(CXL_DEV_BG_CMD_STS, OP, 0, 16)
-    FIELD(CXL_DEV_BG_CMD_STS, PERCENTAGE_COMP, 16, 7)
-    FIELD(CXL_DEV_BG_CMD_STS, RET_CODE, 32, 16)
-    FIELD(CXL_DEV_BG_CMD_STS, VENDOR_RET_CODE, 48, 16)
+FIELD(CXL_DEV_BG_CMD_STS, OP, 0, 16)
+FIELD(CXL_DEV_BG_CMD_STS, PERCENTAGE_COMP, 16, 7)
+FIELD(CXL_DEV_BG_CMD_STS, RET_CODE, 32, 16)
+FIELD(CXL_DEV_BG_CMD_STS, VENDOR_RET_CODE, 48, 16)
 
 /* CXL 2.0 8.2.8.4.8 Command Payload Registers */
 REG32(CXL_DEV_CMD_PAYLOAD, 0x20)
 
 REG64(CXL_MEM_DEV_STS, 0)
-    FIELD(CXL_MEM_DEV_STS, FATAL, 0, 1)
-    FIELD(CXL_MEM_DEV_STS, FW_HALT, 1, 1)
-    FIELD(CXL_MEM_DEV_STS, MEDIA_STATUS, 2, 2)
-    FIELD(CXL_MEM_DEV_STS, MBOX_READY, 4, 1)
-    FIELD(CXL_MEM_DEV_STS, RESET_NEEDED, 5, 3)
+FIELD(CXL_MEM_DEV_STS, FATAL, 0, 1)
+FIELD(CXL_MEM_DEV_STS, FW_HALT, 1, 1)
+FIELD(CXL_MEM_DEV_STS, MEDIA_STATUS, 2, 2)
+FIELD(CXL_MEM_DEV_STS, MBOX_READY, 4, 1)
+FIELD(CXL_MEM_DEV_STS, RESET_NEEDED, 5, 3)
 
 typedef struct CXLError {
     QTAILQ_ENTRY(CXLError) node;
@@ -356,8 +356,7 @@ struct CXLType3Class {
                     uint64_t offset);
 };
 
-struct CXLType3RemoteDev
-{
+struct CXLType3RemoteDev {
     /* Private */
     PCIDevice parent_obj;
     MemoryRegion bar0;
@@ -366,30 +365,38 @@ struct CXLType3RemoteDev
 #define TYPE_CXL_TYPE3_REMOTE "cxl-type3-remote"
 OBJECT_DECLARE_TYPE(CXLType3RemoteDev, CXLType3RemoteClass, CXL_TYPE3_REMOTE)
 
-struct CXLType3RemoteClass
-{
+struct CXLType3RemoteClass {
     /* Private */
     PCIDeviceClass parent_class;
 };
 
-MemTxResult cxl_type1_read(PCIDevice *d, hwaddr host_addr, uint64_t *data, unsigned size, MemTxAttrs attrs);
-MemTxResult cxl_type1_write(PCIDevice *d, hwaddr host_addr, uint64_t *data, unsigned size, MemTxAttrs attrs);
-D2HRsp cxl_type1_access(PCIDevice *d, CXLCacheReq req, uint8_t *buf, unsigned size, MemTxAttrs attrs);
-H2DRsp cxl_type1_response(PCIDevice *d, CXLCacheReq req, uint8_t *buf, unsigned size, MemTxAttrs attrs);
+MemTxResult cxl_type1_read(PCIDevice *d, hwaddr host_addr, uint64_t *data,
+                           unsigned size, MemTxAttrs attrs);
+MemTxResult cxl_type1_write(PCIDevice *d, hwaddr host_addr, uint64_t *data,
+                            unsigned size, MemTxAttrs attrs);
+D2HRsp cxl_type1_access(PCIDevice *d, CXLCacheReq req, uint8_t *buf,
+                        unsigned size, MemTxAttrs attrs);
+H2DRsp cxl_type1_response(PCIDevice *d, CXLCacheReq req, uint8_t *buf,
+                          unsigned size, MemTxAttrs attrs);
 
-S2MRsp cxl_type2_access(PCIDevice *d, CXLMemReq req, uint8_t *buf, unsigned size, MemTxAttrs attrs);
+S2MRsp cxl_type2_access(PCIDevice *d, CXLMemReq req, uint8_t *buf,
+                        unsigned size, MemTxAttrs attrs);
 M2SRsp_BIRsp cxl_type2_response(CXLMemReq req, MemTxAttrs attrs);
 
-MemTxResult cxl_type3_read(PCIDevice *d, hwaddr host_addr, uint64_t *data, unsigned size, MemTxAttrs attrs);
-MemTxResult cxl_type3_write(PCIDevice *d, hwaddr host_addr, uint64_t data, unsigned size, MemTxAttrs attrs);
+MemTxResult cxl_type3_read(PCIDevice *d, hwaddr host_addr, uint64_t *data,
+                           unsigned size, MemTxAttrs attrs);
+MemTxResult cxl_type3_write(PCIDevice *d, hwaddr host_addr, uint64_t data,
+                            unsigned size, MemTxAttrs attrs);
 
 bool cxl_is_remote_root_port(PCIDevice *d);
 PCIDevice *cxl_get_root_port(PCIDevice *d);
 
-MemTxResult cxl_remote_cxl_mem_read(PCIDevice *d, hwaddr host_addr, uint64_t *data,
-                                    unsigned size, MemTxAttrs attrs);
-MemTxResult cxl_remote_cxl_mem_write(PCIDevice *d, hwaddr host_addr, uint64_t data,
-                                     unsigned size, MemTxAttrs attrs);
+MemTxResult cxl_remote_cxl_mem_read(PCIDevice *d, hwaddr host_addr,
+                                    uint64_t *data, unsigned size,
+                                    MemTxAttrs attrs);
+MemTxResult cxl_remote_cxl_mem_write(PCIDevice *d, hwaddr host_addr,
+                                     uint64_t data, unsigned size,
+                                     MemTxAttrs attrs);
 
 void cxl_remote_config_space_read(PCIDevice *d, uint16_t bdf, uint32_t offset,
                                   uint32_t *val, int size);

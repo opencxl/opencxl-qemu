@@ -37,9 +37,9 @@
 
 #define CXL_ROOT_PORT_DID 0x7075
 
-#define CXL_RP_MSI_OFFSET               0x60
-#define CXL_RP_MSI_SUPPORTED_FLAGS      PCI_MSI_FLAGS_MASKBIT
-#define CXL_RP_MSI_NR_VECTOR            2
+#define CXL_RP_MSI_OFFSET 0x60
+#define CXL_RP_MSI_SUPPORTED_FLAGS PCI_MSI_FLAGS_MASKBIT
+#define CXL_RP_MSI_NR_VECTOR 2
 
 /* Copied from the gen root port which we derive */
 #define GEN_PCIE_ROOT_PORT_AER_OFFSET 0x100
@@ -73,7 +73,6 @@ bool cxl_is_remote_root_port(PCIDevice *d)
     return crp->socket_host != NULL;
 }
 
-
 PCIDevice *cxl_get_root_port(PCIDevice *d)
 {
     PCIBus *bus = pci_get_bus(d);
@@ -88,7 +87,6 @@ PCIDevice *cxl_get_root_port(PCIDevice *d)
     }
     return NULL;
 }
-
 
 MemTxResult cxl_remote_cxl_mem_read(PCIDevice *d, hwaddr host_addr,
                                     uint64_t *data, unsigned size,
@@ -120,7 +118,6 @@ MemTxResult cxl_remote_cxl_mem_read(PCIDevice *d, hwaddr host_addr,
     return MEMTX_OK;
 }
 
-
 MemTxResult cxl_remote_cxl_mem_write(PCIDevice *d, hwaddr host_addr,
                                      uint64_t data, unsigned size,
                                      MemTxAttrs attrs)
@@ -149,7 +146,6 @@ MemTxResult cxl_remote_cxl_mem_write(PCIDevice *d, hwaddr host_addr,
     return MEMTX_OK;
 }
 
-
 void cxl_remote_mem_read(PCIDevice *d, uint64_t addr, uint64_t *val, int size)
 {
     trace_cxl_root_cxl_io_mmio_read(addr, size);
@@ -174,7 +170,6 @@ void cxl_remote_mem_read(PCIDevice *d, uint64_t addr, uint64_t *val, int size)
     release_packet_entry(tag);
 }
 
-
 void cxl_remote_mem_write(PCIDevice *d, uint64_t addr, uint64_t val, int size)
 {
     trace_cxl_root_cxl_io_mmio_write(addr, size, val);
@@ -196,14 +191,12 @@ void cxl_remote_mem_write(PCIDevice *d, uint64_t addr, uint64_t val, int size)
     }
 }
 
-
 static bool is_type0_config_request(PCIDevice *root_port, uint16_t bdf)
 {
     uint8_t secondary_bus = root_port->config[PCI_SECONDARY_BUS];
     uint16_t bus = bdf >> 8;
     return bus == secondary_bus;
 }
-
 
 static bool is_valid_bdf(PCIDevice *d, uint16_t bdf)
 {
@@ -212,7 +205,6 @@ static bool is_valid_bdf(PCIDevice *d, uint16_t bdf)
     uint16_t bus = bdf >> 8;
     return bus >= secondary_bus && bus <= subordinate_bus;
 }
-
 
 void cxl_remote_config_space_read(PCIDevice *d, uint16_t bdf, uint32_t offset,
                                   uint32_t *val, int size)
@@ -248,7 +240,6 @@ void cxl_remote_config_space_read(PCIDevice *d, uint16_t bdf, uint32_t offset,
     release_packet_entry(tag);
 }
 
-
 void cxl_remote_config_space_write(PCIDevice *d, uint16_t bdf, uint32_t offset,
                                    uint32_t val, int size)
 {
@@ -282,7 +273,6 @@ void cxl_remote_config_space_write(PCIDevice *d, uint16_t bdf, uint32_t offset,
 
     release_packet_entry(tag);
 }
-
 
 static uint16_t get_number_of_ports(PCIDevice *usp, PCIDevice *rp)
 {
@@ -344,8 +334,7 @@ static int cxl_rp_interrupts_init(PCIDevice *d, Error **errp)
 
     rc = msi_init(d, CXL_RP_MSI_OFFSET, CXL_RP_MSI_NR_VECTOR,
                   CXL_RP_MSI_SUPPORTED_FLAGS & PCI_MSI_FLAGS_64BIT,
-                  CXL_RP_MSI_SUPPORTED_FLAGS & PCI_MSI_FLAGS_MASKBIT,
-                  errp);
+                  CXL_RP_MSI_SUPPORTED_FLAGS & PCI_MSI_FLAGS_MASKBIT, errp);
     if (rc < 0) {
         assert(rc == -ENOTSUP);
     }
@@ -370,42 +359,37 @@ static void build_dvsecs(CXLComponentState *cxl)
 {
     uint8_t *dvsec;
 
-    dvsec = (uint8_t *)&(CXLDVSECPortExtensions){ 0 };
-    cxl_component_create_dvsec(cxl, CXL2_ROOT_PORT,
-                               EXTENSIONS_PORT_DVSEC_LENGTH,
-                               EXTENSIONS_PORT_DVSEC,
-                               EXTENSIONS_PORT_DVSEC_REVID, dvsec);
+    dvsec = (uint8_t *)&(CXLDVSECPortExtensions) { 0 };
+    cxl_component_create_dvsec(
+        cxl, CXL2_ROOT_PORT, EXTENSIONS_PORT_DVSEC_LENGTH,
+        EXTENSIONS_PORT_DVSEC, EXTENSIONS_PORT_DVSEC_REVID, dvsec);
 
-    dvsec = (uint8_t *)&(CXLDVSECPortGPF){
-        .rsvd        = 0,
+    dvsec = (uint8_t *)&(CXLDVSECPortGPF) {
+        .rsvd = 0,
         .phase1_ctrl = 1, /* 1μs timeout */
         .phase2_ctrl = 1, /* 1μs timeout */
     };
-    cxl_component_create_dvsec(cxl, CXL2_ROOT_PORT,
-                               GPF_PORT_DVSEC_LENGTH, GPF_PORT_DVSEC,
-                               GPF_PORT_DVSEC_REVID, dvsec);
+    cxl_component_create_dvsec(cxl, CXL2_ROOT_PORT, GPF_PORT_DVSEC_LENGTH,
+                               GPF_PORT_DVSEC, GPF_PORT_DVSEC_REVID, dvsec);
 
-    dvsec = (uint8_t *)&(CXLDVSECPortFlexBus){
-        .cap                     = 0x26, /* IO, Mem, non-MLD */
-        .ctrl                    = 0x2,
-        .status                  = 0x26, /* same */
+    dvsec = (uint8_t *)&(CXLDVSECPortFlexBus) {
+        .cap = 0x26, /* IO, Mem, non-MLD */
+        .ctrl = 0x2,
+        .status = 0x26, /* same */
         .rcvd_mod_ts_data_phase1 = 0xef,
     };
-    cxl_component_create_dvsec(cxl, CXL2_ROOT_PORT,
-                               PCIE_FLEXBUS_PORT_DVSEC_LENGTH_2_0,
-                               PCIE_FLEXBUS_PORT_DVSEC,
-                               PCIE_FLEXBUS_PORT_DVSEC_REVID_2_0, dvsec);
+    cxl_component_create_dvsec(
+        cxl, CXL2_ROOT_PORT, PCIE_FLEXBUS_PORT_DVSEC_LENGTH_2_0,
+        PCIE_FLEXBUS_PORT_DVSEC, PCIE_FLEXBUS_PORT_DVSEC_REVID_2_0, dvsec);
 
-    dvsec = (uint8_t *)&(CXLDVSECRegisterLocator){
-        .rsvd         = 0,
+    dvsec = (uint8_t *)&(CXLDVSECRegisterLocator) {
+        .rsvd = 0,
         .reg0_base_lo = RBI_COMPONENT_REG | CXL_COMPONENT_REG_BAR_IDX,
         .reg0_base_hi = 0,
     };
-    cxl_component_create_dvsec(cxl, CXL2_ROOT_PORT,
-                               REG_LOC_DVSEC_LENGTH, REG_LOC_DVSEC,
-                               REG_LOC_DVSEC_REVID, dvsec);
+    cxl_component_create_dvsec(cxl, CXL2_ROOT_PORT, REG_LOC_DVSEC_LENGTH,
+                               REG_LOC_DVSEC, REG_LOC_DVSEC_REVID, dvsec);
 }
-
 
 static bool cxl_rp_init_socket_client(CXLRootPort *crp)
 {
@@ -442,7 +426,6 @@ static bool cxl_rp_init_socket_client(CXLRootPort *crp)
 
     return true;
 }
-
 
 static bool cxl_rp_enumerate_child_devices(CXLRootPort *crp, Error **errp)
 {
@@ -493,12 +476,11 @@ static bool cxl_rp_enumerate_child_devices(CXLRootPort *crp, Error **errp)
     return true;
 }
 
-
 static void cxl_rp_realize(DeviceState *dev, Error **errp)
 {
-    PCIDevice *pci_dev     = PCI_DEVICE(dev);
+    PCIDevice *pci_dev = PCI_DEVICE(dev);
     PCIERootPortClass *rpc = PCIE_ROOT_PORT_GET_CLASS(dev);
-    CXLRootPort *crp       = CXL_ROOT_PORT(dev);
+    CXLRootPort *crp = CXL_ROOT_PORT(dev);
     CXLComponentState *cxl_cstate = &crp->cxl_cstate;
     ComponentRegisters *cregs = &cxl_cstate->crb;
     MemoryRegion *component_bar = &cregs->component_registers;
@@ -522,7 +504,7 @@ static void cxl_rp_realize(DeviceState *dev, Error **errp)
     if (!crp->res_reserve.io || crp->res_reserve.io == -1) {
         pci_word_test_and_clear_mask(pci_dev->wmask + PCI_COMMAND,
                                      PCI_COMMAND_IO);
-        pci_dev->wmask[PCI_IO_BASE]  = 0;
+        pci_dev->wmask[PCI_IO_BASE] = 0;
         pci_dev->wmask[PCI_IO_LIMIT] = 0;
     }
 
@@ -630,15 +612,15 @@ static void cxl_rp_write_config(PCIDevice *d, uint32_t address, uint32_t val,
 
 static void cxl_root_port_class_init(ObjectClass *oc, void *data)
 {
-    DeviceClass *dc        = DEVICE_CLASS(oc);
-    PCIDeviceClass *k      = PCI_DEVICE_CLASS(oc);
-    ResettableClass *rc    = RESETTABLE_CLASS(oc);
+    DeviceClass *dc = DEVICE_CLASS(oc);
+    PCIDeviceClass *k = PCI_DEVICE_CLASS(oc);
+    ResettableClass *rc = RESETTABLE_CLASS(oc);
     PCIERootPortClass *rpc = PCIE_ROOT_PORT_CLASS(oc);
 
     k->vendor_id = PCI_VENDOR_ID_INTEL;
     k->device_id = CXL_ROOT_PORT_DID;
-    dc->desc     = "CXL Root Port";
-    k->revision  = 0;
+    dc->desc = "CXL Root Port";
+    k->revision = 0;
     device_class_set_props(dc, gen_rp_props);
     k->config_write = cxl_rp_write_config;
 
@@ -660,10 +642,7 @@ static const TypeInfo cxl_root_port_info = {
     .parent = TYPE_PCIE_ROOT_PORT,
     .instance_size = sizeof(CXLRootPort),
     .class_init = cxl_root_port_class_init,
-    .interfaces = (InterfaceInfo[]) {
-        { INTERFACE_CXL_DEVICE },
-        { }
-    },
+    .interfaces = (InterfaceInfo[]) { { INTERFACE_CXL_DEVICE }, {} },
 };
 
 static void cxl_register(void)

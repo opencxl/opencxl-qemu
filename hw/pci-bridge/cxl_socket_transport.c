@@ -3,6 +3,8 @@
 #include "qemu/range.h"
 #include "qemu/bitops.h"
 #include "hw/cxl/cxl_socket_transport.h"
+#include "hw/cxl/cxl_endian.h"
+#include "hw/cxl/cxl_pretty.h"
 #include "trace.h"
 
 #include <arpa/inet.h>
@@ -16,10 +18,16 @@
 #include <time.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <arpa/inet.h>
+#include <stdlib.h>
 
-#define MAX_TAG          512
+#define MAX_TAG 512
 #define MAX_PAYLOAD_SIZE 512
-#define MAX_DURATION     5
+#define MAX_DURATION 5
+
+// For cxl_io_header_t endianness compatibility
+#define EXTRACT_UPPER_2(length) (extract16(length, 8, 2))
+#define EXTRACT_LOWER_8(length) (extract16(length, 0, 8))
 
 // For mreq_header_t endianness compatibility
 #define EXTRACT_UPPER_56(address) (extract64(address, 2, 56))
@@ -35,6 +43,15 @@ typedef struct packet_table_entry {
 
 packet_table_entry_t packet_entries[512] = { 0 };
 
+/* FUNCTION PROTOTYPES */
+
+/**
+ * @brief Given the payload of a CXL.io packet -- that is,
+ * minus the mandatory system header -- determines the
+ * `fmt_type` of the io packet.
+ */
+static inline cxl_io_fmt_type_t get_io_fmt(uint8_t *raw_pckt_pld_buf);
+
 static bool wait_for_payload(int socket_fd, uint8_t *buffer, size_t buffer_size,
                              size_t payload_size);
 static bool wait_for_system_header(int socket_fd, uint8_t *buffer,
@@ -42,6 +59,13 @@ static bool wait_for_system_header(int socket_fd, uint8_t *buffer,
 static uint16_t get_next_tag(void);
 static bool process_incoming_packets(int socket_fd);
 static packet_table_entry_t *get_packet_entry(uint16_t tag);
+
+/* DEFINITIONS */
+
+static inline cxl_io_fmt_type_t get_io_fmt(uint8_t *raw_pckt_pld_buf)
+{
+    return ((cxl_io_header_t *)raw_pckt_pld_buf)->fmt_type;
+}
 
 bool wait_for_payload(int socket_fd, uint8_t *buffer, size_t buffer_size,
                       size_t payload_size)
@@ -296,12 +320,19 @@ bool send_cxl_io_mem_read(int socket_fd, hwaddr hpa, int size, uint16_t *tag)
     packet.system_header.payload_length = sizeof(packet);
 
     packet.cxl_io_header.fmt_type = MRD_64B;
-    packet.cxl_io_header.length = round_up_to_nearest_dword(size);
+    uint16_t hdr_length = round_up_to_nearest_dword(size);
+
+    packet.cxl_io_header.length_upper = EXTRACT_UPPER_2(hdr_length);
+    packet.cxl_io_header.length_lower = EXTRACT_LOWER_8(hdr_length);
 
     packet.mreq_header.req_id = 0;
     packet.mreq_header.tag = *tag;
-    packet.mreq_header.addr_upper = EXTRACT_UPPER_56(hpa); // endianness compatibility
-    packet.mreq_header.addr_lower = EXTRACT_LOWER_6(hpa); // ditto
+
+    hpa = htonll(hpa);
+
+    packet.mreq_header.addr_upper =
+        (hpa >> 8) & 0xFFFFFFFFFFFFFF; 
+    packet.mreq_header.addr_lower = (hpa & 0xFF) >> 2; 
 
     trace_cxl_socket_debug_num("MRD_64B Packet Size", sizeof(packet));
 
@@ -329,12 +360,18 @@ bool send_cxl_io_mem_write(int socket_fd, hwaddr hpa, uint64_t val, int size,
     packet.system_header.payload_length = sizeof(packet);
 
     packet.cxl_io_header.fmt_type = MWR_64B;
-    packet.cxl_io_header.length = round_up_to_nearest_dword(size);
+    uint16_t hdr_length = round_up_to_nearest_dword(size);
+    packet.cxl_io_header.length_upper = EXTRACT_UPPER_2(hdr_length);
+    packet.cxl_io_header.length_lower = EXTRACT_LOWER_8(hdr_length);
 
     packet.mreq_header.req_id = 0;
     packet.mreq_header.tag = *tag;
-    packet.mreq_header.addr_upper = EXTRACT_UPPER_56(hpa);
-    packet.mreq_header.addr_lower = EXTRACT_LOWER_6(hpa);
+
+    hpa = htonll(hpa);
+
+    packet.mreq_header.addr_upper =
+        (hpa >> 8) & 0xFFFFFFFFFFFFFF; 
+    packet.mreq_header.addr_lower = (hpa & 0xFF) >> 2; 
 
     packet.data = val;
 
@@ -367,14 +404,15 @@ static bool fill_cxl_io_cfg_req_packet(cxl_io_cfg_req_header_t *header,
         offset++;
     }
 
-    header->req_id = req_id;
+    header->req_id = htons(req_id);
     header->tag = tag;
     header->first_dw_be = first_dw_be;
     header->last_dw_be = 0;
-    header->dest_id = id;
-    uint16_t reg_num = (cfg_addr >> 2) & 0x3FF;
-    header->ext_reg_num = EXTRACT_EXTENSION_4(reg_num);
-    header->reg_num = EXTRACT_LOWER_6(reg_num);
+  
+    header->dest_id = htons(id);
+    header->ext_reg_num = (cfg_addr >> 8) & 0xF;
+    header->reg_num = (cfg_addr >> 2) & 0x3F;
+  
     return true;
 }
 
@@ -386,7 +424,7 @@ bool send_cxl_io_config_space_read(int socket_fd, uint16_t bdf, uint32_t offset,
     *tag = get_next_tag();
 
     const uint8_t bus = bdf >> 8;
-    const uint8_t device = bdf & 0x1F >> 3;
+    const uint8_t device = (bdf & 0x1F) >> 3;
     const uint8_t function = bdf & 0x7;
 
     trace_cxl_socket_cxl_io_config_space_read(bus, device, function, offset,
@@ -397,7 +435,8 @@ bool send_cxl_io_config_space_read(int socket_fd, uint16_t bdf, uint32_t offset,
     packet.system_header.payload_type = CXL_IO;
     packet.system_header.payload_length = sizeof(packet);
 
-    packet.cxl_io_header.length = 1;
+    packet.cxl_io_header.length_lower = 1;
+    packet.cxl_io_header.length_upper = 0;
     packet.cxl_io_header.fmt_type = type0 ? CFG_RD0 : CFG_RD1;
 
     fill_cxl_io_cfg_req_packet(&packet.cfg_req_header, bdf, offset, size, 0,
@@ -421,7 +460,7 @@ bool send_cxl_io_config_space_write(int socket_fd, uint16_t bdf,
     *tag = get_next_tag();
 
     const uint8_t bus = bdf >> 8;
-    const uint8_t device = bdf & 0x1F >> 3;
+    const uint8_t device = (bdf & 0x1F) >> 3;
     const uint8_t function = bdf & 0x7;
     trace_cxl_socket_cxl_io_config_space_write(bus, device, function, offset,
                                                size, val);
@@ -431,7 +470,8 @@ bool send_cxl_io_config_space_write(int socket_fd, uint16_t bdf,
     packet.system_header.payload_type = CXL_IO;
     packet.system_header.payload_length = sizeof(packet);
 
-    packet.cxl_io_header.length = 1;
+    packet.cxl_io_header.length_lower = 1;
+    packet.cxl_io_header.length_upper = 0;
     packet.cxl_io_header.fmt_type = type0 ? CFG_WR0 : CFG_WR1;
 
     fill_cxl_io_cfg_req_packet(&packet.cfg_req_header, bdf, offset, size, 0,
@@ -487,7 +527,9 @@ cxl_io_completion_data_packet_t *wait_for_cxl_io_completion_data(int socket_fd,
                    sizeof(cxl_io_completion_data_packet_t));
             packet = (cxl_io_completion_data_packet_t *)(entry->packet);
             for (uint32_t dword_offset = 0;
-                 dword_offset < packet->cxl_io_header.length; ++dword_offset) {
+                 dword_offset < (packet->cxl_io_header.length_upper |
+                                 packet->cxl_io_header.length_lower);
+                 ++dword_offset) {
                 trace_cxl_socket_cxl_io_cpld(packet->data);
             }
             break;
@@ -560,7 +602,7 @@ int32_t create_socket_client(const char *host, uint32_t port)
             trace_cxl_socket_debug_msg("Invalid address or hostname");
             return -1;
         }
-        bcopy(he->h_addr_list[0],&addr.sin_addr, he->h_length);
+        bcopy(he->h_addr_list[0], &addr.sin_addr, he->h_length);
     }
 
     // Connect to the socket

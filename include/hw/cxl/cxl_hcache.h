@@ -34,12 +34,12 @@
  */
 
 #define HOST_BLKSIZE_BIT (6)
-#define HOST_BLKSIZE     (1 << HOST_BLKSIZE_BIT) // fixed 64B aligned
-#define HOST_ASSOC_BIT   (2)
-#define HOST_ASSOC       (1 << HOST_ASSOC_BIT) // # of association (cache columns)
-#define HOST_SET_BIT     (3)
-#define HOST_SET         (1 << HOST_SET_BIT) // # of set (cache rows)
-#define HOST_CACHESIZE   (HOST_BLKSIZE * HOST_ASSOC * HOST_SET)
+#define HOST_BLKSIZE (1 << HOST_BLKSIZE_BIT) // fixed 64B aligned
+#define HOST_ASSOC_BIT (2)
+#define HOST_ASSOC (1 << HOST_ASSOC_BIT) // # of association (cache columns)
+#define HOST_SET_BIT (3)
+#define HOST_SET (1 << HOST_SET_BIT) // # of set (cache rows)
+#define HOST_CACHESIZE (HOST_BLKSIZE * HOST_ASSOC * HOST_SET)
 
 typedef enum {
     CACHE_MISS = 0,

@@ -145,12 +145,6 @@ bool process_incoming_packets(int socket_fd)
         return false;
     }
 
-    uint8_t *main_payload = buffer + buffer_offset; // ignore system header
-    if (system_header->payload_type == CXL_IO)
-        correct_payload_io(main_payload, get_io_fmt(main_payload));
-
-    /* now that we've endian-swapped the fields > 1 byte in width,
-       we are free to memcpy the contents into our array of packet entries. */
     const uint16_t tag = 0;
     assert(packet_entries[tag].packet_size == 0);
     memcpy(packet_entries[tag].packet, buffer, system_header->payload_length);

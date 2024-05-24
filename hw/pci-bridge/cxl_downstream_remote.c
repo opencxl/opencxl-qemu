@@ -117,6 +117,7 @@ static void cxl_dsp_config_write(PCIDevice *pci_dev, uint32_t addr,
 
 static void cxl_dsp_reset(DeviceState *qdev)
 {
+    return;
 }
 
 static void cxl_dsp_realize(PCIDevice *pci_dev, Error **errp)

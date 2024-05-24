@@ -120,8 +120,7 @@ void snpprintpacket(char *buf, void *pckt, size_t at_most)
         break;
     }
 
-    default: {
+    default:
         snprintf(buf, at_most, "[UNRECOGNIZED PACKET TYPE]\n");
-    }
     }
 }

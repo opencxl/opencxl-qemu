@@ -216,14 +216,16 @@ static MemTxResult cxl_read_cfmws(void *opaque, hwaddr addr, uint64_t *data,
     }
 
     if (cxl_is_remote_root_port(d)) {
-        result = cxl_remote_cxl_mem_read(d, addr + fw->base, data, size, attrs);
+        result = cxl_remote_cxl_mem_read_with_cache(d, addr + fw->base, data,
+                                                    size, attrs);
         trace_cxl_read_cfmws("CXL.mem via RP", addr, size, *data);
     } else {
         type = object_get_typename(OBJECT(d));
         if (g_strcmp0(type, "cxl-type1") == 0)
             result = cxl_type1_read(d, addr + fw->base, data, size, attrs);
         else if (g_strcmp0(type, "cxl-type2") == 0)
-            result = cxl_host_type2_hcoh_read(d, addr + fw->base, data, size, attrs);
+            result =
+                cxl_host_type2_hcoh_read(d, addr + fw->base, data, size, attrs);
         else if (g_strcmp0(type, "cxl-type3") == 0) {
             result = cxl_type3_read(d, addr + fw->base, data, size, attrs);
             trace_cxl_read_cfmws("CXL.mem", addr, size, *data);
@@ -252,13 +254,15 @@ static MemTxResult cxl_write_cfmws(void *opaque, hwaddr addr, uint64_t data,
 
     if (cxl_is_remote_root_port(d)) {
         trace_cxl_write_cfmws("CXL.mem via RP", addr, size, data);
-        result = cxl_remote_cxl_mem_write(d, addr + fw->base, data, size, attrs);
+        result = cxl_remote_cxl_mem_write_with_cache(d, addr + fw->base, data,
+                                                     size, attrs);
     } else {
         type = object_get_typename(OBJECT(d));
         if (g_strcmp0(type, "cxl-type1") == 0)
             result = cxl_type1_write(d, addr + fw->base, &data, size, attrs);
         else if (g_strcmp0(type, "cxl-type2") == 0)
-            result = cxl_host_type2_hcoh_write(d, addr + fw->base, data, size, attrs);
+            result = cxl_host_type2_hcoh_write(d, addr + fw->base, data, size,
+                                               attrs);
         else if (g_strcmp0(type, "cxl-type3") == 0) {
             trace_cxl_write_cfmws("CXL.mem", addr, size, data);
             result = cxl_type3_write(d, addr + fw->base, data, size, attrs);
@@ -352,8 +356,7 @@ void cxl_hook_up_pxb_registers(PCIBus *bus, CXLState *state, Error **errp)
 {
     /* Walk the pci busses looking for pxb busses to hook up */
     if (bus) {
-        QLIST_FOREACH(bus, &bus->child, sibling)
-        {
+        QLIST_FOREACH (bus, &bus->child, sibling) {
             if (!pci_bus_is_root(bus)) {
                 continue;
             }

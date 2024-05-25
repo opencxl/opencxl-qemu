@@ -149,8 +149,8 @@ uint64_t cxl_get_dest_cache(PCIDevice *d, hwaddr host_addr, MemTxAttrs attrs)
     /* TODO: maybe a lock mechanism here? */
     uint32_t cache_idx;
     bool cache_hit = false;
-    uint64_t least_accessed_time = ULLONG_MAX;
-    uint64_t least_accessed_candidate = 0;
+    uint64_t oldest_cache_ts = ULLONG_MAX;
+    uint64_t oldest_cache_candidate = 0;
 
     for (cache_idx = 0; cache_idx < CXL_RW_NUM_BUFFERS; cache_idx++) {
         if (!cxl_mem_rw_buffer.inited[cache_idx]) {
@@ -163,15 +163,14 @@ uint64_t cxl_get_dest_cache(PCIDevice *d, hwaddr host_addr, MemTxAttrs attrs)
                 qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
             break;
         }
-        if (cxl_mem_rw_buffer.last_access_time[cache_idx] <
-            least_accessed_time) {
-            least_accessed_time = cxl_mem_rw_buffer.last_access_time[cache_idx];
-            least_accessed_candidate = cache_idx;
+        if (cxl_mem_rw_buffer.last_access_time[cache_idx] < oldest_cache_ts) {
+            oldest_cache_ts = cxl_mem_rw_buffer.last_access_time[cache_idx];
+            oldest_cache_candidate = cache_idx;
         }
     }
     if (!cache_hit) {
         /* Flush an existing cache to the backend */
-        cache_idx = least_accessed_candidate;
+        cache_idx = oldest_cache_candidate;
         cxl_remote_cxl_mem_write(d, cxl_mem_rw_buffer.page_num[cache_idx] << 6,
                                  &cxl_mem_rw_buffer.data[cache_idx][0],
                                  CXL_MEM_ACCESS_UNIT, attrs);

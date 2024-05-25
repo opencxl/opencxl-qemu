@@ -14,12 +14,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #define SYSFS_PATH_MAX 256
 #define DEVICE_PATH_MAX 256
 
 #define DEFAULT_STEP_SIZE 64
-#define ALIGNMENT 2097152  // 2 * 1024 * 1024 (2 MiB)
+#define ALIGNMENT 2097152 // 2 * 1024 * 1024 (2 MiB)
 #define DEFAULT_DEVICE_PATH "dax0.0"
 
 void get_device_size(const char *device_path, off_t *device_size)
@@ -83,12 +84,42 @@ int main(int argc, char *argv[])
     uint64_t io_offset;
     uint64_t *memory_map = mmap_ptr;
 
+    uint64_t *data = (uint64_t *)malloc(DEFAULT_STEP_SIZE);
+    if (data == NULL) {
+        printf("Failed to allocate test data.\n");
+        close(fd);
+        return 1;
+    }
+    data[0] = 0x1111111111111111;
+    data[1] = 0x2222222222222222;
+    data[2] = 0x3333333333333333;
+    data[3] = 0x4444444444444444;
+    data[4] = 0x5555555555555555;
+    data[5] = 0x6666666666666666;
+    data[6] = 0x7777777777777777;
+    data[7] = 0x8888888888888888;
+
+    // Write to mmap region, 64 bytes at a time
     for (io_offset = 0; io_offset < capacity / 8; io_offset += 8) {
-        memory_map[io_offset] = 0xDEADBEEF;
-        printf("Data 0x%lx written at offset 0x%lx\n", 0xDEADBEEF,
-               io_offset * 8);
-        printf("Data 0x%lx read from offset 0x%lx\n", memory_map[io_offset],
-               io_offset * 8);
+        memcpy(&memory_map[io_offset], data, DEFAULT_STEP_SIZE);
+        printf("--Data written at offset 0x%" PRIx64 "--\n", io_offset);
+
+        printf("Data read at 0x%" PRIx64 ": 0x%" PRIx64 "\n", io_offset,
+               memory_map[io_offset]);
+        printf("Data read at 0x%" PRIx64 ": 0x%" PRIx64 "\n", io_offset + 8,
+               memory_map[io_offset + 1]);
+        printf("Data read at 0x%" PRIx64 ": 0x%" PRIx64 "\n", io_offset + 16,
+               memory_map[io_offset + 2]);
+        printf("Data read at 0x%" PRIx64 ": 0x%" PRIx64 "\n", io_offset + 24,
+               memory_map[io_offset + 3]);
+        printf("Data read at 0x%" PRIx64 ": 0x%" PRIx64 "\n", io_offset + 32,
+               memory_map[io_offset + 4]);
+        printf("Data read at 0x%" PRIx64 ": 0x%" PRIx64 "\n", io_offset + 40,
+               memory_map[io_offset + 5]);
+        printf("Data read at 0x%" PRIx64 ": 0x%" PRIx64 "\n", io_offset + 48,
+               memory_map[io_offset + 6]);
+        printf("Data read at 0x%" PRIx64 ": 0x%" PRIx64 "\n", io_offset + 56,
+               memory_map[io_offset + 7]);
     }
 
     // Unmap the memory-mapped region

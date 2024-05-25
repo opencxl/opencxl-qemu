@@ -391,11 +391,18 @@ MemTxResult cxl_type3_write(PCIDevice *d, hwaddr host_addr, uint64_t data,
 bool cxl_is_remote_root_port(PCIDevice *d);
 PCIDevice *cxl_get_root_port(PCIDevice *d);
 
+uint64_t cxl_get_dest_cache(PCIDevice *d, hwaddr host_addr, MemTxAttrs attrs);
+MemTxResult cxl_remote_cxl_mem_read_with_cache(PCIDevice *d, hwaddr host_addr,
+                                               uint64_t *data, unsigned size,
+                                               MemTxAttrs attrs);
 MemTxResult cxl_remote_cxl_mem_read(PCIDevice *d, hwaddr host_addr,
-                                    uint64_t *data, unsigned size,
+                                    uint8_t *data, unsigned size,
                                     MemTxAttrs attrs);
+MemTxResult cxl_remote_cxl_mem_write_with_cache(PCIDevice *d, hwaddr host_addr,
+                                                uint64_t data, unsigned size,
+                                                MemTxAttrs attrs);
 MemTxResult cxl_remote_cxl_mem_write(PCIDevice *d, hwaddr host_addr,
-                                     uint64_t data, unsigned size,
+                                     uint8_t *data, unsigned size,
                                      MemTxAttrs attrs);
 
 void cxl_remote_config_space_read(PCIDevice *d, uint16_t bdf, uint32_t offset,

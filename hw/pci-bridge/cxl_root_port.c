@@ -150,7 +150,7 @@ uint64_t cxl_get_dest_cache(PCIDevice *d, hwaddr host_addr, MemTxAttrs attrs)
     uint32_t cache_idx;
     bool cache_hit = false;
     uint64_t oldest_cache_ts = ULLONG_MAX;
-    uint64_t oldest_cache_candidate = 0;
+    int oldest_cache_candidate = -1;
 
     for (cache_idx = 0; cache_idx < CXL_RW_NUM_BUFFERS; cache_idx++) {
         if (!cxl_mem_rw_buffer.inited[cache_idx]) {
@@ -169,6 +169,11 @@ uint64_t cxl_get_dest_cache(PCIDevice *d, hwaddr host_addr, MemTxAttrs attrs)
         }
     }
     if (!cache_hit) {
+        if (unlikely(oldest_cache_candidate == -1)) {
+            oldest_cache_candidate = 0;
+            trace_cxl_root_debug_message(
+                "unexpected: oldest_cache_candidate is -1\n");
+        }
         /* Flush an existing cache to the backend */
         cache_idx = oldest_cache_candidate;
         cxl_remote_cxl_mem_write(d, cxl_mem_rw_buffer.page_num[cache_idx] << 6,

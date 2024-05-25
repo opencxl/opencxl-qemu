@@ -66,13 +66,17 @@ typedef struct CXLRootPort {
 DECLARE_INSTANCE_CHECKER(CXLRootPort, CXL_ROOT_PORT, TYPE_CXL_ROOT_PORT)
 
 typedef struct cxl_mem_rw_buffer_struct {
-    hwaddr page_num[CXL_RW_NUM_BUFFERS] = { 0 };
-    uint64_t last_access_time[CXL_RW_NUM_BUFFERS] = { 0 };
+    hwaddr page_num[CXL_RW_NUM_BUFFERS];
+    uint64_t last_access_time[CXL_RW_NUM_BUFFERS];
     uint8_t data[CXL_RW_NUM_BUFFERS][CXL_MEM_ACCESS_UNIT];
-    bool inited[CXL_RW_NUM_BUFFERS] = { 0 };
+    bool inited[CXL_RW_NUM_BUFFERS];
 } cxl_mem_rw_buffer_struct;
 
-static struct cxl_mem_rw_buffer;
+static cxl_mem_rw_buffer_struct cxl_mem_rw_buffer = {
+    .page_num = { 0 },
+    .last_access_time = { 0 },
+    .inited = { 0 },
+};
 
 bool cxl_is_remote_root_port(PCIDevice *d)
 {

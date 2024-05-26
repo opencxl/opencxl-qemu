@@ -262,14 +262,6 @@ void cxl_remote_mem_write(PCIDevice *d, uint64_t addr, uint64_t val, int size)
         trace_cxl_root_debug_message("Failed to send CXL.io MEM WR request");
         assert(0);
     }
-
-    cxl_io_completion_packet_t *cxl_packet =
-        wait_for_cxl_io_completion(crp->socket_fd, tag);
-    release_packet_entry(tag);
-    if (cxl_packet == NULL) {
-        trace_cxl_root_debug_message("Failed to get CXL.io CPL response");
-        assert(0);
-    }
 }
 
 static bool is_type0_config_request(PCIDevice *root_port, uint16_t bdf)

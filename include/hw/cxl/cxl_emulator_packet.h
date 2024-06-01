@@ -283,13 +283,78 @@ typedef struct {
 /* CUSTOM EEUM PACKET DEFINITIONS */
 
 typedef enum {
-    D2H_REQ = 0,
+    D2H_REQ  = 0,
     D2H_RESP = 1,
     D2H_DATA = 2,
-    H2D_REQ = 3,
+    H2D_REQ  = 3,
     H2D_RESP = 4,
     H2D_DATA = 5,
 } cxl_cache_channel_t;
+
+typedef enum {
+    DEFAULT = 0,
+    LRU     = 1,
+} cache_nontemporal_t;
+
+typedef enum {
+    CACHE_MISS_LOCAL = 0b00,
+    CACHE_HIT        = 0b01,
+    CACHE_MISS_REM   = 0b10,
+    RSVD             = 0b11,
+} rsp_performance_t;
+
+typedef enum {
+    INVALID   = 0b0011,
+    SHARED    = 0b0001,
+    EXCLUSIVE = 0b0010,
+    MODIFIED  = 0b0110,
+    ERROR     = 0b0100,
+} cache_state_t;
+
+typedef enum {
+    RD_CURR = 1,
+    RD_OWN = 2,
+    RD_SHARED = 3,
+    RD_ANY = 4,
+    RD_OWNNODATA = 5,
+    I_TO_M_WR = 6,
+    WR_CURR = 7,
+    CL_FLUSH = 8,
+    CLEAN_EVICT = 9,
+    DIRTY_EVICT = 10,
+    CLEAN_EVICT_NO_DATA = 11,
+    WO_WR_INV = 12,
+    WO_WR_INV_F = 13,
+    WR_INV = 14,
+    CACHE_FLUSHED = 15,
+} cache_req_d2h_opcode_t;
+
+typedef enum {
+    RSP_I_HIT_I = 0b00100,
+    RSP_V_HIT_V = 0b00110,
+    RSP_I_HIT_SE = 0b00101,
+    RSP_S_HIT_SE = 0b00001,
+    RSP_S_FWD_M = 0b00111,
+    RSP_I_FWD_M = 0b01111,
+    RSP_V_FWD_V = 0b10110,
+} cxl_cache_rsp_d2h_t;
+
+typedef enum {
+    SNP_DATA = 1,
+    SNP_INV  = 2,
+    SNP_CUR  = 3,
+} cache_req_h2d_opcode_t;
+
+typedef enum {
+    WRITE_PULL = 1,
+    GO = 4,
+    GO_WRITE_PULL = 5,
+    EXT_CMP = 6,
+    GO_WRITE_PULL_DROP = 8,
+    RESERVED = 10,
+    FAST_GO_WRITE_PULL = 11,
+    GO_ERR_WRITE_PULL = 15,
+} cache_rsp_h2d_opcode_t;
 
 typedef struct {
     uint8_t port_index;
@@ -297,22 +362,22 @@ typedef struct {
 } cxl_cache_header_packet_t;
 
 typedef struct {
-    bool valid         : 1;
-    uint8_t opcode     : 3; 
-    uint64_t addr      : 46;
-    uint16_t uq_id     : 12;
-    uint8_t cache_id   : 4;
-    uint8_t rsvd       : 6;
+    bool valid                    : 1;
+    cache_req_h2d_opcode_t opcode : 3; 
+    uint64_t addr                 : 46;
+    uint16_t uq_id                : 12;
+    uint8_t cache_id              : 4;
+    uint8_t rsvd                  : 6;
 } __attribute__((packed)) cxl_cache_req_h2d_header_t; /* also "a2f upstream" */
 
 typedef struct {
-    bool valid         : 1;
-    uint8_t opcode     : 5;
-    uint16_t cq_id     : 12;
-    bool nt            : 1;
-    uint8_t cache_id   : 4;
-    uint64_t addr      : 46;
-    uint8_t rsvd       : 7;
+    bool valid                : 1;
+    cache_req_d2h_opcode_t opcode : 5;
+    uint16_t cq_id            : 12;
+    cache_nontemporal_t nt    : 1;
+    uint8_t cache_id          : 4;
+    uint64_t addr             : 46;
+    uint8_t rsvd              : 7;
 } __attribute__((packed)) cxl_cache_req_d2h_header_t; /* also "a2f downstream" */
 
 typedef struct {
@@ -334,20 +399,20 @@ typedef struct {
 } __attribute__((packed)) cxl_cache_data_d2h_header_t; /* also "a2f downstream" */
 
 typedef struct {
-    bool valid         : 1;
-    uint8_t opcode     : 4;
-    uint16_t rsp_data  : 12;
-    uint8_t rsp_pre    : 2;
-    uint16_t cq_id     : 12;
-    uint8_t cache_id   : 4;
-    bool rsvd          : 5;
+    bool valid                : 1;
+    uint8_t opcode            : 4;
+    cache_state_t rsp_data    : 12;
+    rsp_performance_t rsp_pre : 2;
+    uint16_t cq_id            : 12;
+    uint8_t cache_id          : 4;
+    bool rsvd                 : 5;
 } __attribute__((packed)) cxl_cache_rsp_h2d_header_t;
 
 typedef struct {
-    bool valid         : 1;
-    uint8_t opcode     : 5;
-    uint16_t uq_id     : 12;
-    uint8_t rsvd       : 6;
+    bool valid                 : 1;
+    cxl_cache_rsp_d2h_t opcode : 5;
+    uint16_t uq_id             : 12;
+    uint8_t rsvd               : 6;
 } __attribute__((packed)) cxl_cache_rsp_d2h_header_t;
 
 /* PACKET DEFINITIONS */

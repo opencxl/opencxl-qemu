@@ -283,12 +283,12 @@ typedef struct {
 /* CUSTOM EEUM PACKET DEFINITIONS */
 
 typedef enum {
-    D2H_REQ  = 0,
-    D2H_RESP = 1,
-    D2H_DATA = 2,
-    H2D_REQ  = 3,
-    H2D_RESP = 4,
-    H2D_DATA = 5,
+    D2H_REQ  = 1,
+    D2H_RESP = 2,
+    D2H_DATA = 3,
+    H2D_REQ  = 4,
+    H2D_RESP = 5,
+    H2D_DATA = 6,
 } cxl_cache_channel_t;
 
 typedef enum {
@@ -346,14 +346,14 @@ typedef enum {
 } cache_req_h2d_opcode_t;
 
 typedef enum {
-    WRITE_PULL = 1,
-    GO = 4,
-    GO_WRITE_PULL = 5,
-    EXT_CMP = 6,
-    GO_WRITE_PULL_DROP = 8,
-    RESERVED = 10,
-    FAST_GO_WRITE_PULL = 11,
-    GO_ERR_WRITE_PULL = 15,
+    WRITE_PULL = 0b0001,
+    GO = 0b0100,
+    GO_WRITE_PULL = 0b0101,
+    EXT_CMP = 0b0110,
+    GO_WRITE_PULL_DROP = 0b1000,
+    RESERVED = 0b1100,
+    FAST_GO_WRITE_PULL = 0b1101,
+    GO_ERR_WRITE_PULL = 0b1111,
 } cache_rsp_h2d_opcode_t;
 
 typedef struct {

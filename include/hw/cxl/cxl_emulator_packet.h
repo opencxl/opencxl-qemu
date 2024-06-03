@@ -433,7 +433,7 @@ typedef struct {
 typedef struct {
     system_header_packet_t system_header;
     cxl_cache_header_packet_t cxl_cache_header;
-    cxl_cache_rsp_h2d_header_t req_h2d;
+    cxl_cache_req_h2d_header_t req_h2d;
 } __attribute__((packed)) cxl_cache_req_h2d_packet_t;
 
 typedef struct {
@@ -445,14 +445,14 @@ typedef struct {
 typedef struct {
     system_header_packet_t system_header;
     cxl_cache_header_packet_t cxl_cache_header;
-    cxl_cache_rsp_d2h_header_t data_d2h;
+    cxl_cache_data_d2h_header_t data_d2h;
     uint8_t cacheline[64];
 } __attribute__((packed)) cxl_cache_data_d2h_packet_t;
 
 typedef struct {
     system_header_packet_t system_header;
     cxl_cache_header_packet_t cxl_cache_header;
-    cxl_cache_rsp_d2h_header_t req_d2h;
+    cxl_cache_req_d2h_header_t req_d2h;
 } __attribute__((packed)) cxl_cache_req_d2h_packet_t;
 
 #endif /* CXL_EMULATOR_PACKET_H */

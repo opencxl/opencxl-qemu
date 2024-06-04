@@ -1,14 +1,13 @@
 
-.PHONY: format vm
+.PHONY: format vm vm-noaccel
 
-# Run as "make vm accel=no" to turn off KVM on (usually virtual) machines
-# that do not support hardware acceleration.
-vm:
-ifeq ($(accel),no)
+# Run this recipe to turn off KVM virtualization.
+# Useful on (usually virtual) machines that do not support hardware acceleration.
+vm-noaccel:
 	./start-vm-no-accel.sh
-else
+
+vm:
 	./start-vm.sh
-endif
 
 # Run as "make format FMT_PATHS="../path/to/format/1 ../path/to/format/2"."
 format:

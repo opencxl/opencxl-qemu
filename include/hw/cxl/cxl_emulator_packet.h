@@ -170,9 +170,9 @@ typedef struct {
     uint64_t data; /* TODO: Support dynamic data size */
 } __attribute__((packed)) cxl_io_completion_data_packet_t;
 
-//
-// CXL.mem
-//
+/*
+ * CXL.mem
+ */
 
 #define CXL_RW_NUM_BUFFERS 2
 #define CXL_MEM_ACCESS_UNIT 64
@@ -274,9 +274,9 @@ typedef struct {
     uint64_t data[8];
 } __attribute__((packed)) cxl_mem_s2m_drs_packet_t;
 
-//
-// CXL.cache
-//
+/*
+ * CXL.cache
+ */
 
 /* CUSTOM EEUM PACKET DEFINITIONS */
 

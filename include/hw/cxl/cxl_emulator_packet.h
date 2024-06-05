@@ -9,6 +9,7 @@
 #define CXL_EMULATOR_PACKET_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "exec/hwaddr.h"
 
@@ -405,7 +406,7 @@ typedef struct {
     rsp_performance_t rsp_pre : 2;
     uint16_t cq_id            : 12;
     uint8_t cache_id          : 4;
-    bool rsvd                 : 5;
+    uint8_t rsvd              : 5;
 } __attribute__((packed)) cxl_cache_rsp_h2d_header_t;
 
 typedef struct {

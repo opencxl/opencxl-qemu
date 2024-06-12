@@ -24,14 +24,18 @@
  * (little-endian). Note that this function is not standardized by the
  * UNIX standard, but we need it anyway.
  */
+#ifndef ntohll
 uint64_t ntohll(uint64_t netllong);
+#endif
 
 /**
  * @brief Converts "host" uint64_t (little-endian) to "network" uint64_t
  * (big-endian). Note that this function is not standardized by the
  * UNIX standard, but we need it anyway.
  */
+#ifndef htonll
 uint64_t htonll(uint64_t hllong);
+#endif
 
 #define CXL_ENDIAN_H
 #endif

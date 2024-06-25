@@ -314,7 +314,7 @@ bool send_cxl_io_mem_read(int socket_fd, hwaddr hpa, int size, uint16_t *tag)
 
     assert(size % 4 == 0); // Ensure size is dword aligned
 
-    cxl_io_mem_rd_packet_t packet = {};
+    cxl_io_mem_base_packet_t packet = {};
 
     packet.system_header.payload_type = CXL_IO;
     packet.system_header.payload_length = sizeof(packet);
@@ -329,9 +329,6 @@ bool send_cxl_io_mem_read(int socket_fd, hwaddr hpa, int size, uint16_t *tag)
     packet.mreq_header.tag = *tag;
 
     packet.mreq_header.addr_lower = (hpa & 0xFF) >> 2;
-
-    /* No need to do >> 8 because htonll reverts the byte order
-       and the mask removes the MSByte (was LSByte) automatically. */
     packet.mreq_header.addr_upper = htonll(hpa) & 0xFFFFFFFFFFFFFF;
 
     trace_cxl_socket_debug_num("MRD_64B Packet Size", sizeof(packet));
@@ -354,52 +351,44 @@ bool send_cxl_io_mem_write(int socket_fd, hwaddr hpa, uint64_t val, int size,
 
     assert(size % 4 == 0); // Ensure size is dword aligned
 
-    cxl_io_mem_wr_packet_32b_t packet;
+    cxl_io_mem_base_packet_t *base;
+    cxl_io_mem_wr_packet_32b_t packet_32;
     cxl_io_mem_wr_packet_64b_t packet_64;
     bool successful;
 
     uint16_t hdr_length = round_up_to_nearest_dword(size) / 4;
+    size_t payload_length = 0;
 
-    if (size > 4) {
-        assert(size == 8);
-        assert(val < 0xFFFFFFFFFFFFFFFF);
-        packet_64.system_header.payload_type = CXL_IO;
-
-        packet_64.cxl_io_header.fmt_type = MWR_64B;
-
-        packet_64.cxl_io_header.length_upper = EXTRACT_UPPER_2(hdr_length);
-        packet_64.cxl_io_header.length_lower = EXTRACT_LOWER_8(hdr_length);
-
-        packet_64.mreq_header.req_id = 0;
-        packet_64.mreq_header.tag = *tag;
-
-        packet_64.mreq_header.addr_lower = (hpa & 0xFF) >> 2;
-        packet_64.mreq_header.addr_upper = htonll(hpa) & 0xFFFFFFFFFFFFFF;
-        packet_64.system_header.payload_length = sizeof(packet_64);
+    if (size == 8) {
+        assert(val < UINT64_MAX);
+        base = (cxl_io_mem_base_packet_t *)&packet_64;
+        payload_length = sizeof(packet_64);
         packet_64.data = val;
-        successful = write(socket_fd, &packet_64, sizeof(packet_64)) != -1;
-        trace_cxl_socket_debug_num("MWR_64B Packet Size", sizeof(packet_64));
+    } else if (size == 4) {
+        assert(val < UINT32_MAX);
+        base = (cxl_io_mem_base_packet_t *)&packet_32;
+        payload_length = sizeof(packet_32);
+        packet_32.data = (uint32_t)(val & 0xFFFFFFFF);
     } else {
-        assert(size == 4);
-        assert(val < 0xFFFFFFFF);
-        packet.system_header.payload_type = CXL_IO;
-
-        packet.cxl_io_header.fmt_type = MWR_32B;
-
-        packet.cxl_io_header.length_upper = EXTRACT_UPPER_2(hdr_length);
-        packet.cxl_io_header.length_lower = EXTRACT_LOWER_8(hdr_length);
-
-        packet.mreq_header.req_id = 0;
-        packet.mreq_header.tag = *tag;
-
-        packet.mreq_header.addr_lower = (hpa & 0xFF) >> 2;
-        packet.mreq_header.addr_upper = htonll(hpa) & 0xFFFFFFFFFFFFFF;
-        packet.system_header.payload_length = sizeof(packet);
-        packet.data = (uint32_t)(val & 0xFFFFFFFF);
-        successful = write(socket_fd, &packet, sizeof(packet)) != -1;
-        trace_cxl_socket_debug_num("MWR_32B Packet Size", sizeof(packet));
+        successful = false;
+        assert(size == 4 || size == 8);
     }
 
+    base->system_header.payload_type = CXL_IO;
+
+    base->cxl_io_header.fmt_type = size == 8 ? MWR_64B : MWR_32B;
+
+    base->cxl_io_header.length_upper = EXTRACT_UPPER_2(hdr_length);
+    base->cxl_io_header.length_lower = EXTRACT_LOWER_8(hdr_length);
+
+    base->mreq_header.req_id = 0;
+    base->mreq_header.tag = *tag;
+
+    base->mreq_header.addr_lower = (hpa & 0xFF) >> 2;
+    base->mreq_header.addr_upper = htonll(hpa) & 0xFFFFFFFFFFFFFF;
+    base->system_header.payload_length = payload_length;
+    successful = write(socket_fd, base, payload_length) != -1;
+    trace_cxl_socket_debug_num("MWR_64/32B Packet Size", payload_length);
     trace_cxl_socket_debug_msg("[Sending Packet] END");
 
     return successful;
@@ -534,12 +523,12 @@ cxl_io_completion_packet_t *wait_for_cxl_io_completion(int socket_fd,
     return packet;
 }
 
-uint64_t wait_for_cxl_io_completion_data(int socket_fd, uint16_t tag,
-                                         uint64_t *data)
+size_t wait_for_cxl_io_completion_data(int socket_fd, uint16_t tag,
+                                       uint64_t *data)
 {
     trace_cxl_socket_debug_msg("[Receiving Packet] START");
 
-    uint64_t packet_size = 0;
+    size_t packet_size = 0;
 
     while (true) {
         packet_table_entry_t *entry = get_packet_entry(tag);

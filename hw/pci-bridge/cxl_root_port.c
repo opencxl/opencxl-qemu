@@ -239,7 +239,7 @@ void cxl_remote_mem_read(PCIDevice *d, uint64_t addr, uint64_t *val, int size)
         assert(0);
     }
 
-    uint64_t packet_size =
+    size_t packet_size =
         wait_for_cxl_io_completion_data(crp->socket_fd, tag, val);
     if (packet_size == 0) {
         release_packet_entry(tag);
@@ -308,12 +308,6 @@ void cxl_remote_config_space_read(PCIDevice *d, uint16_t bdf, uint32_t offset,
     }
 
     wait_for_cxl_io_cfg_completion(crp->socket_fd, tag, val);
-
-    /*
-    Since now the OpenCXL backend assumes 4-byte aligned data reqs,
-    We are going to make sure that we can read the data correctly
-    from correct locations. Similar to CxlIoCfgWrPacket.get_value().
-    */
 
     uint32_t lsb_diff = offset % 4;
     uint32_t msb_diff = 4 - lsb_diff;

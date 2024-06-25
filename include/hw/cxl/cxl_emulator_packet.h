@@ -112,19 +112,15 @@ typedef struct {
     system_header_packet_t system_header;
     cxl_io_header_t cxl_io_header;
     cxl_io_mreq_header_t mreq_header;
-} __attribute__((packed)) cxl_io_mem_rd_packet_t;
+} __attribute__((packed)) cxl_io_mem_base_packet_t;
 
 typedef struct {
-    system_header_packet_t system_header;
-    cxl_io_header_t cxl_io_header;
-    cxl_io_mreq_header_t mreq_header;
+    cxl_io_mem_base_packet_t headers;
     uint32_t data;
 } __attribute__((packed)) cxl_io_mem_wr_packet_32b_t;
 
 typedef struct {
-    system_header_packet_t system_header;
-    cxl_io_header_t cxl_io_header;
-    cxl_io_mreq_header_t mreq_header;
+    cxl_io_mem_base_packet_t headers;
     uint64_t data;
 } __attribute__((packed)) cxl_io_mem_wr_packet_64b_t;
 

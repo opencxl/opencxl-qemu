@@ -368,7 +368,7 @@ bool send_cxl_io_mem_write(int socket_fd, hwaddr hpa, uint64_t val, int size,
         assert(val < UINT32_MAX);
         base = (cxl_io_mem_base_packet_t *)&packet_32;
         payload_length = sizeof(packet_32);
-        packet_32.data = (uint32_t)(val & 0xFFFFFFFF);
+        packet_32.data = (uint32_t)(val & UINT32_MAX);
     } else {
         successful = false;
         assert(size == 4 || size == 8);

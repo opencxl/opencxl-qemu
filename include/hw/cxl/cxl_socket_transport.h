@@ -42,8 +42,8 @@ bool send_cxl_io_config_space_write(int socket_fd, uint16_t bdf,
                                     bool type0, uint16_t *tag);
 cxl_io_completion_packet_t *wait_for_cxl_io_completion(int socket_fd,
                                                        uint16_t tag);
-cxl_io_completion_data_packet_t *wait_for_cxl_io_completion_data(int socket_fd,
-                                                                 uint16_t tag);
+uint64_t wait_for_cxl_io_completion_data(int socket_fd, uint16_t tag,
+                                         uint64_t *data);
 void wait_for_cxl_io_cfg_completion(int socket_fd, uint16_t tag,
                                     uint32_t *data);
 

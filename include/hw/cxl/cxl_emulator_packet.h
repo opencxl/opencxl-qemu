@@ -118,8 +118,15 @@ typedef struct {
     system_header_packet_t system_header;
     cxl_io_header_t cxl_io_header;
     cxl_io_mreq_header_t mreq_header;
-    uint64_t data; /* TODO: Support dynamic data size */
-} __attribute__((packed)) cxl_io_mem_wr_packet_t;
+    uint32_t data;
+} __attribute__((packed)) cxl_io_mem_wr_packet_32b_t;
+
+typedef struct {
+    system_header_packet_t system_header;
+    cxl_io_header_t cxl_io_header;
+    cxl_io_mreq_header_t mreq_header;
+    uint64_t data;
+} __attribute__((packed)) cxl_io_mem_wr_packet_64b_t;
 
 typedef struct {
     uint16_t req_id;
@@ -168,8 +175,15 @@ typedef struct {
     system_header_packet_t system_header;
     cxl_io_header_t cxl_io_header;
     cxl_io_completion_header_t cpl_header;
-    uint64_t data; /* TODO: Support dynamic data size */
-} __attribute__((packed)) cxl_io_completion_data_packet_t;
+    uint32_t data;
+} __attribute__((packed)) cxl_io_completion_data_packet_32b_t;
+
+typedef struct {
+    system_header_packet_t system_header;
+    cxl_io_header_t cxl_io_header;
+    cxl_io_completion_header_t cpl_header;
+    uint64_t data;
+} __attribute__((packed)) cxl_io_completion_data_packet_64b_t;
 
 /*
  * CXL.mem
@@ -365,8 +379,8 @@ typedef struct {
     cache_req_h2d_opcode_t opcode : 3;
     uint64_t addr                 : 46;
     uint16_t uq_id                : 12;
-    uint8_t cache_id              : 4;
-    uint8_t rsvd                  : 6;
+    uint16_t cache_id             : 4;
+    uint16_t rsvd                 : 6;
 } __attribute__((packed)) cxl_cache_req_h2d_header_t; /* also "a2f upstream" */
 
 typedef struct {
@@ -374,19 +388,19 @@ typedef struct {
     cache_req_d2h_opcode_t opcode : 5;
     uint16_t cq_id                : 12;
     cache_nontemporal_t nt        : 1;
-    uint8_t cache_id              : 4;
+    uint16_t cache_id             : 4;
     uint64_t addr                 : 46;
-    uint8_t rsvd                  : 7;
-}
-__attribute__((packed)) cxl_cache_req_d2h_header_t; /* also "a2f downstream" */
+    uint16_t rsvd                 : 7;
+} __attribute__((packed))
+cxl_cache_req_d2h_header_t; /* also "a2f downstream" */
 
 typedef struct {
-    bool valid       : 1;
-    uint16_t cq_id   : 12;
-    bool poison      : 1;
-    bool go_err      : 1;
-    uint8_t cache_id : 4;
-    uint16_t rsvd    : 9;
+    bool valid        : 1;
+    uint16_t cq_id    : 12;
+    bool poison       : 1;
+    bool go_err       : 1;
+    uint16_t cache_id : 4;
+    uint16_t rsvd     : 9;
 } __attribute__((packed)) cxl_cache_data_h2d_header_t; /* also "a2f upstream" */
 
 typedef struct {
@@ -395,25 +409,25 @@ typedef struct {
     bool bogus     : 1;
     bool poison    : 1;
     bool bep       : 1;
-    uint8_t rsvd   : 8;
-}
-__attribute__((packed)) cxl_cache_data_d2h_header_t; /* also "a2f downstream" */
+    uint16_t rsvd  : 8;
+} __attribute__((packed))
+cxl_cache_data_d2h_header_t; /* also "a2f downstream" */
 
 typedef struct {
     bool valid                : 1;
-    uint8_t opcode            : 4;
+    uint16_t opcode           : 4;
     cache_state_t rsp_data    : 12;
     rsp_performance_t rsp_pre : 2;
     uint16_t cq_id            : 12;
-    uint8_t cache_id          : 4;
-    uint8_t rsvd              : 5;
+    uint16_t cache_id         : 4;
+    uint16_t rsvd             : 5;
 } __attribute__((packed)) cxl_cache_rsp_h2d_header_t;
 
 typedef struct {
     bool valid                 : 1;
     cxl_cache_rsp_d2h_t opcode : 5;
     uint16_t uq_id             : 12;
-    uint8_t rsvd               : 6;
+    uint16_t rsvd              : 6;
 } __attribute__((packed)) cxl_cache_rsp_d2h_header_t;
 
 /* PACKET DEFINITIONS */

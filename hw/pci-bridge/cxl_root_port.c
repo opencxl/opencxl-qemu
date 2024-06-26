@@ -239,15 +239,14 @@ void cxl_remote_mem_read(PCIDevice *d, uint64_t addr, uint64_t *val, int size)
         assert(0);
     }
 
-    cxl_io_completion_data_packet_t *cxl_packet =
-        wait_for_cxl_io_completion_data(crp->socket_fd, tag);
-    if (cxl_packet == NULL) {
+    size_t packet_size =
+        wait_for_cxl_io_completion_data(crp->socket_fd, tag, val);
+    if (packet_size == 0) {
         release_packet_entry(tag);
         trace_cxl_root_debug_message("Failed to get CXL.io CPLD response");
         assert(0);
     }
 
-    *val = cxl_packet->data;
     release_packet_entry(tag);
 }
 
@@ -310,6 +309,12 @@ void cxl_remote_config_space_read(PCIDevice *d, uint16_t bdf, uint32_t offset,
 
     wait_for_cxl_io_cfg_completion(crp->socket_fd, tag, val);
 
+    uint32_t lsb_diff = offset % 4;
+    uint32_t msb_diff = 4 - lsb_diff;
+
+    *val <<= (msb_diff - size) * 8;
+    *val >>= ((lsb_diff + msb_diff - size)) * 8;
+
     release_packet_entry(tag);
 }
 
@@ -327,6 +332,10 @@ void cxl_remote_config_space_write(PCIDevice *d, uint16_t bdf, uint32_t offset,
     const uint8_t bus = bdf >> 8;
     const uint8_t device = bdf & 0x1F >> 3;
     const uint8_t function = bdf & 0x7;
+
+    uint32_t lsb_diff = offset % 4;
+
+    val <<= lsb_diff * 8;
 
     if (type0) {
         trace_cxl_root_cxl_io_config_space_write0(bus, device, function, offset,

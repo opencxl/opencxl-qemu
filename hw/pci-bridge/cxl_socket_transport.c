@@ -360,7 +360,6 @@ bool send_cxl_io_mem_write(int socket_fd, hwaddr hpa, uint64_t val, int size,
     size_t payload_length = 0;
 
     if (size == 8) {
-        assert(val < UINT64_MAX);
         base = (cxl_io_mem_base_packet_t *)&packet_64;
         payload_length = sizeof(packet_64);
         packet_64.data = val;
